@@ -1,10 +1,15 @@
-
+/**
+  ******************************************************************************
+  * @file    LSM6DS0_map.h
+  * @brief   This file provides the register mapping and device addresses for the LSM6DS0 sensor.
+  ******************************************************************************
+  */
 
 #ifndef LSM6DS0_INC_LSM6DS0_MAP_H_
 #define LSM6DS0_INC_LSM6DS0_MAP_H_
 
 
-// REGISTER ADDRESSES
+// Register addresses
 #define ACT_THS_ADDRESS				0x04
 #define ACT_DUR_ADDRESS				0x05
 #define INT_GEN_CFG_XL_ADDRESS		0x06
@@ -55,7 +60,7 @@
 #define INT_GEN_THS_ZL_G_ADDRESS	0x36
 #define INT_GEN_DUR_G_ADDRESS		0x37
 
-// DEVICE VALUES
+// Device values
 #define WHO_AM_I_VALUE				0x68
 #define DEVICE_ADDRESS_HIGH 	   (0x6B) << 1
 #define DEVICE_ADDRESS_LOW 		   (0x6A) << 1

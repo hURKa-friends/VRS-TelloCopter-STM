@@ -1,16 +1,37 @@
+/**
+  ******************************************************************************
+  * @file    LIS3MDL.c
+  * @brief   This file file provides code for LIS3MDL sensor
+  ******************************************************************************
+  */
+
 #include "LIS3MDL.h"
 #include "i2c.h"
 #include "usart.h"
 
+// Global variables
 uint8_t LIS3MDL_DEVICE_ADDRESS;
 
 int16_t X_offset;
 int16_t Y_offset;
 int16_t Z_offset;
 
-static uint8_t (* LIS3MDL_read)(uint8_t slave_address, uint8_t register_address, uint8_t num_of_bytes, uint8_t bytes[]) = 0;
+/**
+  * @brief  Pointer to a function that reads data from an I2C slave device.
+  *         This callback handles both single-byte and multi-byte read operations.
+  * @param  slave_address: 7-bit I2C address of the slave device.
+  * @param  register_address: register address to read from. For multi-byte reads, MSB is set to 1.
+  * @param  bytes: pointer to the buffer where received data will be stored.
+  * @param  num_of_bytes: number of bytes to read.
+  * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
+  */
+static uint8_t (* LIS3MDL_read)(uint8_t slave_address, uint8_t register_address,uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
-/* Register callback */
+/**
+  * @brief  Function for registering reading callback function.
+  * @param  callback: function to be registered as callback function.
+  * @retval None.
+  */
 void LIS3MDL_registerCallback_read_bytes(void *callback)
 {
 	if(callback != 0)
@@ -19,9 +40,22 @@ void LIS3MDL_registerCallback_read_bytes(void *callback)
 	}
 }
 
-static uint8_t (* LIS3MDL_write)(uint8_t slave_address, uint8_t register_address, uint8_t num_of_bytes, uint8_t bytes[]) = 0;
+/**
+  * @brief  Pointer to a function that writes data to an I2C slave device.
+  *         This callback handles both single-byte and multi-byte write operations.
+  * @param  slave_address: 7-bit I2C address of the slave device.
+  * @param  register_address: register address to read from. For multi-byte reads, MSB is set to 1.
+  * @param  bytes: pointer to the buffer containing data to be transmitted.
+  * @param  num_of_bytes: number of bytes to write.
+  * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
+  */
+static uint8_t (* LIS3MDL_write)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
-/* Register callback */
+/**
+  * @brief  Function for registering writing callback function.
+  * @param  callback: function to be registered as callback function.
+  * @retval None.
+  */
 void LIS3MDL_registerCallback_write_bytes(void *callback)
 {
 	if(callback != 0)
@@ -30,6 +64,11 @@ void LIS3MDL_registerCallback_write_bytes(void *callback)
 	}
 }
 
+/**
+  * @brief  Reads a single byte from the specified register on the LIS3MDL sensor.
+  * @param  register_address: address of the register to read from on the LIS3MDL.
+  * @retval The byte value read from the specified register.
+  */
 uint8_t LIS3MDL_read_byte(uint8_t register_address) {
 	uint8_t byte;
 
@@ -38,18 +77,42 @@ uint8_t LIS3MDL_read_byte(uint8_t register_address) {
 	return byte;
 }
 
+/**
+  * @brief  Reads multiple bytes starting from the specified register on the LIS3MDL sensor.
+  * @param  register_address: address of the register to start reading from on the LIS3MDL.
+  * @param  data: pointer to the buffer where received data will be stored.
+  * @param  length: number of bytes to read.
+  * @retval None.
+  */
 void LIS3MDL_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) {
 	LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 }
 
+/**
+  * @brief  Writes a single byte to the specified register on the LIS3MDL sensor.
+  * @param  register_address: address of the register to write to on the LIS3MDL.
+  * @param  byte: byte to be written to the register
+  * @retval None.
+  */
 void LIS3MDL_write_byte(uint8_t register_address, uint8_t byte) {
 	LIS3MDL_write(LIS3MDL_DEVICE_ADDRESS, register_address, &byte, 1);
 }
 
+/**
+  * @brief  Writes multiple bytes starting from the specified register on the LIS3MDL sensor.
+  * @param  register_address: address of the register to start writing from on the LIS3MDL.
+  * @param  data: pointer to the buffer that contains data to be written.
+  * @param  length: number of bytes to write.
+  * @retval None.
+  */
 void LIS3MDL_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) {
 	LIS3MDL_write(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 }
 
+/**
+  * @brief  Function for initializing the sensor LIS3MDL.
+  * @retval None.
+  */
 void LIS3MDL_init() {
 	LIS3MDL_registerCallback_read_bytes(I2C_read());//////////////
 	LIS3MDL_registerCallback_write_bytes(I2C_write());////////////
@@ -81,6 +144,14 @@ void LIS3MDL_init() {
 	USART_write("LIS3MDL Init successful.");/////////////////
 }
 
+/**
+  * @brief  Function for receiving data from magnetic sensor LIS3MDL.
+  * @param	mag_bytes: array where data will be written.
+  * 		[0]: value in X axis
+  * 		[1]: value in Y axis
+  * 		[2]: value in Z axis
+  * @retval None.
+  */
 void LIS3MDL_get_mag_bytes(int16_t mag_bytes[]) {
 	uint8_t OUT_X[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
@@ -106,20 +177,32 @@ void LIS3MDL_get_mag_bytes(int16_t mag_bytes[]) {
 	mag_bytes[2] = Z_value + Z_offset;
 }
 
+/**
+  * @brief  Function for setting control registers of the sensor LIS3MDL.
+  * @retval None.
+  */
 void LIS3MDL_set_registers() {
 	uint8_t CTRL_REG_DEVICE[NUMBER_OF_CTRL_REG];
 
-	LIS3MDL_read_bytes(CTRL_REG1_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
+	/*
+	 * TODO
+	 * full-scale selection
+	 */
 
-	CTRL_REG_DEVICE[0] = 0b;
-	CTRL_REG_DEVICE[0] = 0b;
-	CTRL_REG_DEVICE[0] = 0b;
-	CTRL_REG_DEVICE[0] = 0b;
-	CTRL_REG_DEVICE[0] = 0b;
+	CTRL_REG_DEVICE[0] = 0b01011110;
+	CTRL_REG_DEVICE[0] = 0b01100000;
+	CTRL_REG_DEVICE[0] = 0b00000000; // pozri rozlisenie, frekvencie
+	CTRL_REG_DEVICE[0] = 0b00001000;
+	CTRL_REG_DEVICE[0] = 0b00000000;
 
 	LIS3MDL_write_bytes(CTRL_REG1_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
 }
 
+/**
+  * @brief  Function for reading offsets of values from the sensor LIS3MDL.
+  * 		Offsets are written to their respective global variables.
+  * @retval None.
+  */
 void LIS3MDL_read_offsets() {
 	uint8_t LIS3MDL_OFFSET_REG_X[2];
 	uint8_t LIS3MDL_OFFSET_REG_Y[2];

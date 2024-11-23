@@ -1,10 +1,15 @@
-
+/**
+  ******************************************************************************
+  * @file    LIS3MDL_map.h
+  * @brief   This file provides the register mapping and device addresses for the LIS3MDL sensor.
+  ******************************************************************************
+  */
 
 #ifndef LIS3MDL_INC_LIS3MDL_MAP_H_
 #define LIS3MDL_INC_LIS3MDL_MAP_H_
 
 
-// REGISTER ADDRESSES
+// Register addresses
 #define OFFSET_X_REG_L_M_ADDRESS	0x05
 #define OFFSET_X_REG_H_M_ADDRESS	0x06
 #define OFFSET_Y_REG_L_M_ADDRESS	0x07
@@ -31,7 +36,7 @@
 #define INT_THS_L_ADDRESS			0x32
 #define INT_THS_H_ADDRESS			0x33
 
-// DEVICE VALUES
+// Device values
 #define WHO_AM_I_VALUE				0x3D
 #define DEVICE_ADDRESS_HIGH		   (0x1E) << 1
 #define DEVICE_ADDRESS_LOW		   (0x1C) << 1

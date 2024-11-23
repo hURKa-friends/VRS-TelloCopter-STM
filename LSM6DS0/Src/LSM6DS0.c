@@ -1,12 +1,33 @@
+/**
+  ******************************************************************************
+  * @file    LSM6DS0.c
+  * @brief   This file file provides code for LSM6DS0 sensor
+  ******************************************************************************
+  */
+
 #include "LSM6DS0.h"
 #include "i2c.h"
 #include "usart.h"
 
+// Global variables
 uint8_t LSM6DS0_DEVICE_ADDRESS;
 
-static uint8_t (* LSM6DS0_read)(uint8_t slave_address, uint8_t register_address, uint8_t num_of_bytes, uint8_t bytes[]) = 0;
+/**
+  * @brief  Pointer to a function that reads data from an I2C slave device.
+  *         This callback handles both single-byte and multi-byte read operations.
+  * @param  slave_address: 7-bit I2C address of the slave device.
+  * @param  register_address: register address to read from. For multi-byte reads, MSB is set to 1.
+  * @param  bytes: pointer to the buffer where received data will be stored.
+  * @param  num_of_bytes: number of bytes to read.
+  * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
+  */
+static uint8_t (* LSM6DS0_read)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
-/* Register callback */
+/**
+  * @brief  Function for registering reading callback function.
+  * @param  callback: function to be registered as callback function.
+  * @retval None.
+  */
 void LSM6DS0_registerCallback_read_bytes(void *callback)
 {
 	if(callback != 0)
@@ -15,9 +36,22 @@ void LSM6DS0_registerCallback_read_bytes(void *callback)
 	}
 }
 
-static uint8_t (* LSM6DS0_write)(uint8_t slave_address, uint8_t register_address, uint8_t num_of_bytes, uint8_t bytes[]) = 0;
+/**
+  * @brief  Pointer to a function that writes data to an I2C slave device.
+  *         This callback handles both single-byte and multi-byte write operations.
+  * @param  slave_address: 7-bit I2C address of the slave device.
+  * @param  register_address: register address to read from. For multi-byte reads, MSB is set to 1.
+  * @param  bytes: pointer to the buffer containing data to be transmitted.
+  * @param  num_of_bytes: number of bytes to write.
+  * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
+  */
+static uint8_t (* LSM6DS0_write)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
-/* Register callback */
+/**
+  * @brief  Function for registering writing callback function.
+  * @param  callback: function to be registered as callback function.
+  * @retval None.
+  */
 void LSM6DS0_registerCallback_write_bytes(void *callback)
 {
 	if(callback != 0)
@@ -26,6 +60,11 @@ void LSM6DS0_registerCallback_write_bytes(void *callback)
 	}
 }
 
+/**
+  * @brief  Reads a single byte from the specified register on the LSM6DS0 sensor.
+  * @param  register_address: address of the register to read from on the LSM6DS0.
+  * @retval The byte value read from the specified register.
+  */
 uint8_t LSM6DS0_read_byte(uint8_t register_address) {
 	uint8_t byte;
 
@@ -34,18 +73,42 @@ uint8_t LSM6DS0_read_byte(uint8_t register_address) {
 	return byte;
 }
 
+/**
+  * @brief  Reads multiple bytes starting from the specified register on the LSM6DS0 sensor.
+  * @param  register_address: address of the register to start reading from on the LSM6DS0.
+  * @param  data: pointer to the buffer where received data will be stored.
+  * @param  length: number of bytes to read.
+  * @retval None.
+  */
 void LSM6DS0_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) {
 	LSM6DS0_read(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 }
 
+/**
+  * @brief  Writes a single byte to the specified register on the LSM6DS0 sensor.
+  * @param  register_address: address of the register to write to on the LSM6DS0.
+  * @param  byte: byte to be written to the register
+  * @retval None.
+  */
 void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte) {
 	LSM6DS0_write(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
 }
 
+/**
+  * @brief  Writes multiple bytes starting from the specified register on the LSM6DS0 sensor.
+  * @param  register_address: address of the register to start writing from on the LSM6DS0.
+  * @param  data: pointer to the buffer that contains data to be written.
+  * @param  length: number of bytes to write.
+  * @retval None.
+  */
 void LSM6DS0_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) {
 	LSM6DS0_write(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 }
 
+/**
+  * @brief  Function for initializing the sensor LSM6DS0.
+  * @retval None.
+  */
 void LSM6DS0_init() {
 	LSM6DS0_registerCallback_read_bytes(I2C_read());//////////////
 	LSM6DS0_registerCallback_write_bytes(I2C_write());////////////
@@ -75,6 +138,14 @@ void LSM6DS0_init() {
 	USART_write("LSM6DS0 Init successful.");////////////////////
 }
 
+/**
+  * @brief  Function for receiving data from acceleration sensor LSM6DS0.
+  * @param	accl_bytes: array where data will be written.
+  * 		[0]: value in X axis
+  * 		[1]: value in Y axis
+  * 		[2]: value in Z axis
+  * @retval None.
+  */
 void LSM6DS0_get_accl_bytes(int16_t accl_bytes[]) {
 	uint8_t OUT_X[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
@@ -100,6 +171,14 @@ void LSM6DS0_get_accl_bytes(int16_t accl_bytes[]) {
 	accl_bytes[2] = Z_value;
 }
 
+/**
+  * @brief  Function for receiving data from gyroscope sensor LSM6DS0.
+  * @param	gyro_bytes: array where data will be written.
+  * 		[0]: value in X axis
+  * 		[1]: value in Y axis
+  * 		[2]: value in Z axis
+  * @retval None.
+  */
 void LSM6DS0_get_gyro_bytes(int16_t gyro_bytes[]) {
 	uint8_t OUT_X[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
@@ -125,25 +204,33 @@ void LSM6DS0_get_gyro_bytes(int16_t gyro_bytes[]) {
 	gyro_bytes[2] = Z_value;
 }
 
+/**
+  * @brief  Function for setting control registers of the sensor LSM6DS0.
+  * @retval None.
+  */
 void LSM6DS0_set_registers() {
 	uint8_t CTRL_REG_DEVICE[NUMBER_OF_CTRL_REG];
 	uint8_t CTRL_REG_GYRO[NUMBER_OF_CTRL_REG];
 	uint8_t CTRL_REG_ACCL[NUMBER_OF_CTRL_REG];
 
-	LSM6DS0_read_bytes(CTRL_REG8_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
-	LSM6DS0_read_bytes(CTRL_REG1_G_ADDRESS, CTRL_REG_GYRO, NUMBER_OF_CTRL_REG);
-	LSM6DS0_read_bytes(CTRL_REG5_XL_ADDRESS, CTRL_REG_ACCL, NUMBER_OF_CTRL_REG);
+	/*
+	 * TODO
+	 * decimation
+	 * full-scale selection
+	 * frequency cutoff, high/low pass filters,
+	 * ORIENT_CFG_G
+	 */
 
-	CTRL_REG_DEVICE[0] = 0b;
-	CTRL_REG_DEVICE[1] = 0b;
-	CTRL_REG_DEVICE[2] = 0b;
+	CTRL_REG_DEVICE[0] = 0b00000100;
+	CTRL_REG_DEVICE[1] = 0b00000000;
+	CTRL_REG_DEVICE[2] = 0b00000000;
 
-	CTRL_REG_GYRO[0] = 0b;
-	CTRL_REG_GYRO[1] = 0b;
-	CTRL_REG_GYRO[2] = 0b;
+	CTRL_REG_GYRO[0] = 0b10011011;
+	CTRL_REG_GYRO[1] = 0b00000000;
+	CTRL_REG_GYRO[2] = 0b00000000;
 
-	CTRL_REG_ACCL[0] = 0b;
-	CTRL_REG_ACCL[1] = 0b;
+	CTRL_REG_ACCL[0] = 0b01111000;
+	CTRL_REG_ACCL[1] = 0b00011010;
 	CTRL_REG_ACCL[2] = 0b;
 
 	LSM6DS0_write_bytes(CTRL_REG8_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
