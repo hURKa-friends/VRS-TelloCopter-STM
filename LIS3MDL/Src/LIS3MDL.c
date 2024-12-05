@@ -145,36 +145,60 @@ void LIS3MDL_init() {
 }
 
 /**
-  * @brief  Function for receiving data from magnetic sensor LIS3MDL.
+  * @brief  Function for receiving data from magnetic sensor of the LIS3MDL.
   * @param	mag_bytes: array where data will be written.
   * 		[0]: value in X axis
   * 		[1]: value in Y axis
   * 		[2]: value in Z axis
   * @retval None.
   */
-void LIS3MDL_get_mag_bytes(int16_t mag_bytes[]) {
+void LIS3MDL_get_mag_bytes(float mag_bytes[]) {
 	uint8_t OUT_X[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Z[NUMBER_OF_OUT_REG];
 
-	int16_t X_value;
+	/*int16_t X_value;
 	int16_t Y_value;
-	int16_t Z_value;
+	int16_t Z_value;*/
 
 	LIS3MDL_read_bytes(OUT_X_L_ADDRESS, OUT_X, NUMBER_OF_OUT_REG);
 	LIS3MDL_read_bytes(OUT_Y_L_ADDRESS, OUT_Y, NUMBER_OF_OUT_REG);
 	LIS3MDL_read_bytes(OUT_Z_L_ADDRESS, OUT_Z, NUMBER_OF_OUT_REG);
+
+	/*uint8_t sign_X = (OUT_X[1] >> 7) & 1;
+	uint8_t sign_Y = (OUT_Y[1] >> 7) & 1;
+	uint8_t sign_Z = (OUT_Z[1] >> 7) & 1;
+
+
 
 	X_value = OUT_X[1] << 8;
 	X_value |= OUT_X[0];
 	Y_value = OUT_Y[1] << 8;
 	Y_value |= OUT_Y[0];
 	Z_value = OUT_Z[1] << 8;
-	Z_value |= OUT_Z[0];
+	Z_value |= OUT_Z[0];*/
 
-	mag_bytes[0] = X_value + X_offset;
-	mag_bytes[1] = Y_value + Y_offset;
-	mag_bytes[2] = Z_value + Z_offset;
+	mag_bytes[0] = OUT_to_float(OUT_X[1], OUT_X[0]);//X_value + X_offset;
+	mag_bytes[1] = OUT_to_float(OUT_Y[1], OUT_Y[0]);//Y_value + Y_offset;
+	mag_bytes[2] = OUT_to_float(OUT_Z[1], OUT_Z[0]);//Z_value + Z_offset;
+}
+
+/**
+  * @brief  Converts two registers to 2's complement floating-point value.
+  * @param	MSB: most significant byte of the two registers.
+  * @param  LSB: least significant byte of the two registers.
+  * @retval Value of the two registers as float.
+  */
+float OUT_to_float(uint8_t MSB, uint8_t LSB) {
+	float value;
+	uint8_t sign = (MSB >> 7) & 1;
+
+	value = sign << (FLOAT_SIZE_IN_BITS - 1);
+	value |= MSB << 8;
+	value &= ~(1 << 16);
+	value |= LSB;
+
+	return value;
 }
 
 /**
@@ -190,8 +214,8 @@ void LIS3MDL_set_registers() {
 	 */
 
 	CTRL_REG_DEVICE[0] = 0b01011110;
-	CTRL_REG_DEVICE[0] = 0b01100000;
-	CTRL_REG_DEVICE[0] = 0b00000000; // pozri rozlisenie, frekvencie
+	CTRL_REG_DEVICE[0] = 0b00100000;
+	CTRL_REG_DEVICE[0] = 0b00000000;
 	CTRL_REG_DEVICE[0] = 0b00001000;
 	CTRL_REG_DEVICE[0] = 0b00000000;
 

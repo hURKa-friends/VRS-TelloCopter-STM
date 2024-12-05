@@ -14,6 +14,7 @@
 #define NUMBER_OF_CTRL_REG			5
 #define NUMBER_OF_OFFSET_REG		2
 #define NUMBER_OF_OUT_REG			2
+#define FLOAT_SIZE_IN_BITS		   (8 * sizeof(float))
 
 // Functions declaration
 void LIS3MDL_init();

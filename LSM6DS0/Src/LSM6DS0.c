@@ -139,7 +139,7 @@ void LSM6DS0_init() {
 }
 
 /**
-  * @brief  Function for receiving data from acceleration sensor LSM6DS0.
+  * @brief  Function for receiving data from acceleration sensor of the LSM6DS0.
   * @param	accl_bytes: array where data will be written.
   * 		[0]: value in X axis
   * 		[1]: value in Y axis
@@ -151,57 +151,53 @@ void LSM6DS0_get_accl_bytes(int16_t accl_bytes[]) {
 	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Z[NUMBER_OF_OUT_REG];
 
-	int16_t X_value;
-	int16_t Y_value;
-	int16_t Z_value;
-
 	LSM6DS0_read_bytes(OUT_X_L_XL_ADDRESS, OUT_X, NUMBER_OF_OUT_REG);
 	LSM6DS0_read_bytes(OUT_Y_L_XL_ADDRESS, OUT_Y, NUMBER_OF_OUT_REG);
 	LSM6DS0_read_bytes(OUT_Z_L_XL_ADDRESS, OUT_Z, NUMBER_OF_OUT_REG);
 
-	X_value = OUT_X[1] << 8;
-	X_value |= OUT_X[0];
-	Y_value = OUT_Y[1] << 8;
-	Y_value |= OUT_Y[0];
-	Z_value = OUT_Z[1] << 8;
-	Z_value |= OUT_Z[0];
-
-	accl_bytes[0] = X_value;
-	accl_bytes[1] = Y_value;
-	accl_bytes[2] = Z_value;
+	accl_bytes[0] = OUT_to_float(OUT_X[1], OUT_X[0]);
+	accl_bytes[1] = OUT_to_float(OUT_Y[1], OUT_Y[0]);
+	accl_bytes[2] = OUT_to_float(OUT_Z[1], OUT_Z[0]);
 }
 
 /**
-  * @brief  Function for receiving data from gyroscope sensor LSM6DS0.
+  * @brief  Function for receiving data from gyroscope sensor of the LSM6DS0.
   * @param	gyro_bytes: array where data will be written.
   * 		[0]: value in X axis
   * 		[1]: value in Y axis
   * 		[2]: value in Z axis
   * @retval None.
   */
-void LSM6DS0_get_gyro_bytes(int16_t gyro_bytes[]) {
+void LSM6DS0_get_gyro_bytes(float gyro_bytes[]) {
 	uint8_t OUT_X[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
 	uint8_t OUT_Z[NUMBER_OF_OUT_REG];
-
-	int16_t X_value;
-	int16_t Y_value;
-	int16_t Z_value;
 
 	LSM6DS0_read_bytes(OUT_X_L_G_ADDRESS, OUT_X, NUMBER_OF_OUT_REG);
 	LSM6DS0_read_bytes(OUT_Y_L_G_ADDRESS, OUT_Y, NUMBER_OF_OUT_REG);
 	LSM6DS0_read_bytes(OUT_Z_L_G_ADDRESS, OUT_Z, NUMBER_OF_OUT_REG);
 
-	X_value = OUT_X[1] << 8;
-	X_value |= OUT_X[0];
-	Y_value = OUT_Y[1] << 8;
-	Y_value |= OUT_Y[0];
-	Z_value = OUT_Z[1] << 8;
-	Z_value |= OUT_Z[0];
+	gyro_bytes[0] = OUT_to_float(OUT_X[1], OUT_X[0]);
+	gyro_bytes[1] = OUT_to_float(OUT_Y[1], OUT_Y[0]);
+	gyro_bytes[2] = OUT_to_float(OUT_Z[1], OUT_Z[0]);
+}
 
-	gyro_bytes[0] = X_value;
-	gyro_bytes[1] = Y_value;
-	gyro_bytes[2] = Z_value;
+/**
+  * @brief  Converts two registers to 2's complement floating-point value.
+  * @param	MSB: most significant byte of the two registers.
+  * @param  LSB: least significant byte of the two registers.
+  * @retval Value of the two registers as float.
+  */
+float OUT_to_float(uint8_t MSB, uint8_t LSB) {
+	float value;
+	uint8_t sign = (MSB >> 7) & 1;
+
+	value = sign << (FLOAT_SIZE_IN_BITS - 1);
+	value |= MSB << 8;
+	value &= ~(1 << 16);
+	value |= LSB;
+
+	return value;
 }
 
 /**
@@ -225,13 +221,13 @@ void LSM6DS0_set_registers() {
 	CTRL_REG_DEVICE[1] = 0b00000000;
 	CTRL_REG_DEVICE[2] = 0b00000000;
 
-	CTRL_REG_GYRO[0] = 0b10011011;
+	CTRL_REG_GYRO[0] = 0b10000010;
 	CTRL_REG_GYRO[1] = 0b00000000;
 	CTRL_REG_GYRO[2] = 0b00000000;
 
 	CTRL_REG_ACCL[0] = 0b01111000;
-	CTRL_REG_ACCL[1] = 0b00011010;
-	CTRL_REG_ACCL[2] = 0b;
+	CTRL_REG_ACCL[1] = 0b00010000;
+	CTRL_REG_ACCL[2] = 0b11000100;
 
 	LSM6DS0_write_bytes(CTRL_REG8_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
 	LSM6DS0_write_bytes(CTRL_REG1_G_ADDRESS, CTRL_REG_GYRO, NUMBER_OF_CTRL_REG);
