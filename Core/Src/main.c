@@ -26,7 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "HTS221.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,10 +60,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 void TIM2_IRQ_main(void)
 {
-	HTS221_humi = HTS221_get_humi();
-	HTS221_temp = HTS221_get_temp();
-	HTS221_humi = HTS221_get_humi();
-	HTS221_temp = HTS221_get_temp();
+
 }
 /* USER CODE END 0 */
 
@@ -109,7 +106,6 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  HTS221_Init(I2C1_MultiByteRead,I2C1_MultiByteWrite);
   TIM2_RegisterCallback(TIM2_IRQ_main);
   /* USER CODE END 2 */
 
