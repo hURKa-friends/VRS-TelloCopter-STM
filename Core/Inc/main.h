@@ -69,7 +69,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void formatAndSaveToCSV(float current_angle, float y, float z);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

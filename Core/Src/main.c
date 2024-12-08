@@ -26,7 +26,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "LSM6DS0.h"
+#include "LIS3MDL.h"
 
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -36,7 +39,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+float x;
+float y;
+float z;
+uint8_t lsm6ds0_status;
+uint8_t tx_data2[26];
+float current_angle = 0.0;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,7 +55,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-float HTS221_humi = 0, HTS221_temp = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,7 +68,16 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 void TIM2_IRQ_main(void)
 {
+	// TODO: I2C Read logic - T = 8.333ms
+	y = LSM6DS0_readXGyroRegister(y);
+	z = LSM6DS0_readXGyroRegister(z);
+}
 
+void TIM3_IRQ_main(void)
+{
+	// TODO: USART logic + Data Processing - T = 50ms
+	current_angle = update_angle(current_angle);
+	formatAndSaveToCSV(current_angle, y, z);
 }
 /* USER CODE END 0 */
 
@@ -105,25 +122,33 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
+
   /* USER CODE BEGIN 2 */
   TIM2_RegisterCallback(TIM2_IRQ_main);
+  TIM3_RegisterCallback(TIM3_IRQ_main);
+
+  LSM6DS0_registerReadCallback(I2C1_MultiByteRead);
+  LSM6DS0_registerWriteCallback(I2C1_MultiByteWrite);
+  LSM6DS0_init();
+
+  LIS3MDL_registerReadCallback(I2C1_MultiByteRead);
+  LIS3MDL_registerWriteCallback(I2C1_MultiByteWrite);
+  LIS3MDL_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  while (1)
-  {
+	while (1)
+	{
+		// TODO: Possible Data Processing ??
 
-	LL_GPIO_SetOutputPin(GPIOA, TESTPIN_4_Pin);
-	  asm("#NOP");
-	LL_GPIO_ResetOutputPin(GPIOA, TESTPIN_4_Pin);
+		LL_GPIO_SetOutputPin(GPIOA, TESTPIN_4_Pin);
+		asm("#NOP");
+		LL_GPIO_ResetOutputPin(GPIOA, TESTPIN_4_Pin);
+		/* USER CODE END WHILE */
 
-
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-  }
+		/* USER CODE BEGIN 3 */
+	}
   /* USER CODE END 3 */
 }
 
@@ -169,7 +194,28 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void formatAndSaveToCSV(float current_angle, float y, float z)
+{
+    // Buffers to hold formatted strings
+    char forx[6];
+    char fory[6];
+    char forz[6];
 
+    // Clear tx_data2 buffer
+    memset(tx_data2, '\0', sizeof(tx_data2));
+
+    // Format each value with the specified precision
+    snprintf(forx, sizeof(forx), "%.2f", current_angle);
+    snprintf(fory, sizeof(fory), "%.2f", y);
+    snprintf(forz, sizeof(forz), "%.2f", z);
+
+    // Combine formatted values into tx_data2
+    snprintf((char *)tx_data2, sizeof(tx_data2), "%s,%s,%s\r", forx, fory, forz);
+
+    // Send tx_data2 buffer via USART2
+    // TODO: Implement USART
+    // USART2_PutBuffer(tx_data2, strlen((char *)tx_data2)); // Use strlen for accurate size
+}
 /* USER CODE END 4 */
 
 /**

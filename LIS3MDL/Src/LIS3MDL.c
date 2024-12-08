@@ -6,7 +6,6 @@
   */
 
 #include "LIS3MDL.h"
-#include "i2c.h"
 #include "usart.h"
 
 // Global variables
@@ -32,7 +31,7 @@ static uint8_t (* LIS3MDL_read)(uint8_t slave_address, uint8_t register_address,
   * @param  callback: function to be registered as callback function.
   * @retval None.
   */
-void LIS3MDL_registerCallback_read_bytes(void *callback)
+void LIS3MDL_registerReadCallback(void *callback)
 {
 	if(callback != 0)
 	{
@@ -56,7 +55,7 @@ static uint8_t (* LIS3MDL_write)(uint8_t slave_address, uint8_t register_address
   * @param  callback: function to be registered as callback function.
   * @retval None.
   */
-void LIS3MDL_registerCallback_write_bytes(void *callback)
+void LIS3MDL_registerWriteCallback(void *callback)
 {
 	if(callback != 0)
 	{
@@ -69,11 +68,10 @@ void LIS3MDL_registerCallback_write_bytes(void *callback)
   * @param  register_address: address of the register to read from on the LIS3MDL.
   * @retval The byte value read from the specified register.
   */
-uint8_t LIS3MDL_read_byte(uint8_t register_address) {
+uint8_t LIS3MDL_read_byte(uint8_t register_address)
+{
 	uint8_t byte;
-
 	LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS, register_address, &byte, 1);
-
 	return byte;
 }
 
@@ -84,7 +82,8 @@ uint8_t LIS3MDL_read_byte(uint8_t register_address) {
   * @param  length: number of bytes to read.
   * @retval None.
   */
-void LIS3MDL_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) {
+void LIS3MDL_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
+{
 	LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 }
 
@@ -94,7 +93,8 @@ void LIS3MDL_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_o
   * @param  byte: byte to be written to the register
   * @retval None.
   */
-void LIS3MDL_write_byte(uint8_t register_address, uint8_t byte) {
+void LIS3MDL_write_byte(uint8_t register_address, uint8_t byte)
+{
 	LIS3MDL_write(LIS3MDL_DEVICE_ADDRESS, register_address, &byte, 1);
 }
 
@@ -105,7 +105,8 @@ void LIS3MDL_write_byte(uint8_t register_address, uint8_t byte) {
   * @param  length: number of bytes to write.
   * @retval None.
   */
-void LIS3MDL_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) {
+void LIS3MDL_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
+{
 	LIS3MDL_write(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 }
 
@@ -113,35 +114,78 @@ void LIS3MDL_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_
   * @brief  Function for initializing the sensor LIS3MDL.
   * @retval None.
   */
-void LIS3MDL_init() {
-	LIS3MDL_registerCallback_read_bytes(I2C_read());//////////////
-	LIS3MDL_registerCallback_write_bytes(I2C_write());////////////
-
+void LIS3MDL_init()
+{
 	uint8_t who_am_i_value;
 
-	if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_HIGH, WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
-		LIS3MDL_DEVICE_ADDRESS = LIS3MDL_DEVICE_ADDRESS_HIGH;
+	if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_H, LIS3MDL_WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
+		LIS3MDL_DEVICE_ADDRESS = LIS3MDL_DEVICE_ADDRESS_H;
 	}
-	else if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_LOW, WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
-		LIS3MDL_DEVICE_ADDRESS = LIS3MDL_DEVICE_ADDRESS_LOW;
+	else if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_L, LIS3MDL_WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
+		LIS3MDL_DEVICE_ADDRESS = LIS3MDL_DEVICE_ADDRESS_L;
 	}
-	else {
-		USART_write("LIS3MDL Init failed.");/////////////////
-
+	else
+	{
+		//USART_write("LIS3MDL Init failed.");/////////////////
 		return;
 	}
 
-	if (who_am_i_value != WHO_AM_I_VALUE) {
-		USART_write("LIS3MDL Init failed.");/////////////////
-
+	if (who_am_i_value != LIS3MDL_WHO_AM_I_VALUE)
+	{
+		//USART_write("LIS3MDL Init failed.");/////////////////
 		return;
 	}
-
 
 	LIS3MDL_set_registers();
 	LIS3MDL_read_offsets();
 
-	USART_write("LIS3MDL Init successful.");/////////////////
+	//USART_write("LIS3MDL Init successful.");/////////////////
+}
+
+
+/**
+  * @brief  Function for setting control registers of the sensor LIS3MDL.
+  * @retval None.
+  */
+void LIS3MDL_set_registers()
+{
+	uint8_t CTRL_REG_DEVICE[LIS3MDL_NUMBER_OF_CTRL_REG];
+
+	/*
+	 * TODO
+	 * full-scale selection
+	 */
+
+	CTRL_REG_DEVICE[0] = 0b01011110;
+	CTRL_REG_DEVICE[0] = 0b00100000;
+	CTRL_REG_DEVICE[0] = 0b00000000;
+	CTRL_REG_DEVICE[0] = 0b00001000;
+	CTRL_REG_DEVICE[0] = 0b00000000;
+
+	LIS3MDL_write_bytes(LIS3MDL_CTRL_REG1_ADDRESS, CTRL_REG_DEVICE, LIS3MDL_NUMBER_OF_CTRL_REG);
+}
+
+/**
+  * @brief  Function for reading offsets of values from the sensor LIS3MDL.
+  * 		Offsets are written to their respective global variables.
+  * @retval None.
+  */
+void LIS3MDL_read_offsets()
+{
+	uint8_t LIS3MDL_OFFSET_REG_X[2];
+	uint8_t LIS3MDL_OFFSET_REG_Y[2];
+	uint8_t LIS3MDL_OFFSET_REG_Z[2];
+
+	LIS3MDL_read_bytes(LIS3MDL_OFFSET_X_REG_L_M_ADDRESS, LIS3MDL_OFFSET_REG_X, LIS3MDL_NUMBER_OF_OFFSET_REG);
+	LIS3MDL_read_bytes(LIS3MDL_OFFSET_Y_REG_L_M_ADDRESS, LIS3MDL_OFFSET_REG_Y, LIS3MDL_NUMBER_OF_OFFSET_REG);
+	LIS3MDL_read_bytes(LIS3MDL_OFFSET_Z_REG_L_M_ADDRESS, LIS3MDL_OFFSET_REG_Z, LIS3MDL_NUMBER_OF_OFFSET_REG);
+
+	X_offset = LIS3MDL_OFFSET_REG_X[1] << 8;
+	X_offset |= LIS3MDL_OFFSET_REG_X[0];
+	Y_offset = LIS3MDL_OFFSET_REG_Y[1] << 8;
+	Y_offset |= LIS3MDL_OFFSET_REG_Y[0];
+	Z_offset = LIS3MDL_OFFSET_REG_Z[1] << 8;
+	Z_offset |= LIS3MDL_OFFSET_REG_Z[0];
 }
 
 /**
@@ -152,18 +196,19 @@ void LIS3MDL_init() {
   * 		[2]: value in Z axis
   * @retval None.
   */
-void LIS3MDL_get_mag_bytes(float mag_bytes[]) {
-	uint8_t OUT_X[NUMBER_OF_OUT_REG];
-	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
-	uint8_t OUT_Z[NUMBER_OF_OUT_REG];
+void LIS3MDL_get_mag_bytes(float mag_bytes[])
+{
+	uint8_t OUT_X[LIS3MDL_NUMBER_OF_OUT_REG];
+	uint8_t OUT_Y[LIS3MDL_NUMBER_OF_OUT_REG];
+	uint8_t OUT_Z[LIS3MDL_NUMBER_OF_OUT_REG];
 
 	/*int16_t X_value;
 	int16_t Y_value;
 	int16_t Z_value;*/
 
-	LIS3MDL_read_bytes(OUT_X_L_ADDRESS, OUT_X, NUMBER_OF_OUT_REG);
-	LIS3MDL_read_bytes(OUT_Y_L_ADDRESS, OUT_Y, NUMBER_OF_OUT_REG);
-	LIS3MDL_read_bytes(OUT_Z_L_ADDRESS, OUT_Z, NUMBER_OF_OUT_REG);
+	LIS3MDL_read_bytes(LIS3MDL_OUT_X_L_ADDRESS, OUT_X, LIS3MDL_NUMBER_OF_OUT_REG);
+	LIS3MDL_read_bytes(LIS3MDL_OUT_Y_L_ADDRESS, OUT_Y, LIS3MDL_NUMBER_OF_OUT_REG);
+	LIS3MDL_read_bytes(LIS3MDL_OUT_Z_L_ADDRESS, OUT_Z, LIS3MDL_NUMBER_OF_OUT_REG);
 
 	/*uint8_t sign_X = (OUT_X[1] >> 7) & 1;
 	uint8_t sign_Y = (OUT_Y[1] >> 7) & 1;
@@ -178,9 +223,9 @@ void LIS3MDL_get_mag_bytes(float mag_bytes[]) {
 	Z_value = OUT_Z[1] << 8;
 	Z_value |= OUT_Z[0];*/
 
-	mag_bytes[0] = OUT_to_float(OUT_X[1], OUT_X[0]);//X_value + X_offset;
-	mag_bytes[1] = OUT_to_float(OUT_Y[1], OUT_Y[0]);//Y_value + Y_offset;
-	mag_bytes[2] = OUT_to_float(OUT_Z[1], OUT_Z[0]);//Z_value + Z_offset;
+	mag_bytes[0] = LIS3MDL_OUT_to_float(OUT_X[1], OUT_X[0]);//X_value + X_offset;
+	mag_bytes[1] = LIS3MDL_OUT_to_float(OUT_Y[1], OUT_Y[0]);//Y_value + Y_offset;
+	mag_bytes[2] = LIS3MDL_OUT_to_float(OUT_Z[1], OUT_Z[0]);//Z_value + Z_offset;
 }
 
 /**
@@ -189,57 +234,19 @@ void LIS3MDL_get_mag_bytes(float mag_bytes[]) {
   * @param  LSB: least significant byte of the two registers.
   * @retval Value of the two registers as float.
   */
-float OUT_to_float(uint8_t MSB, uint8_t LSB) {
-	float value;
-	uint8_t sign = (MSB >> 7) & 1;
-
-	value = sign << (FLOAT_SIZE_IN_BITS - 1);
-	value |= MSB << 8;
-	value &= ~(1 << 16);
-	value |= LSB;
-
-	return value;
-}
-
-/**
-  * @brief  Function for setting control registers of the sensor LIS3MDL.
-  * @retval None.
-  */
-void LIS3MDL_set_registers() {
-	uint8_t CTRL_REG_DEVICE[NUMBER_OF_CTRL_REG];
-
-	/*
-	 * TODO
-	 * full-scale selection
+float LIS3MDL_OUT_to_float(uint8_t MSB, uint8_t LSB)
+{
+	// TODO: Vracia mi chyby ? Neviem skompilovat ??
+	/* float value;
+	 * uint8_t sign = (MSB >> 7) & 1;
+	 *
+	 * value = sign << (FLOAT_SIZE_IN_BITS - 1);
+	 * value |= MSB << 8;
+	 * value &= ~(1 << 16);
+	 * value |= LSB;
+	 *
 	 */
 
-	CTRL_REG_DEVICE[0] = 0b01011110;
-	CTRL_REG_DEVICE[0] = 0b00100000;
-	CTRL_REG_DEVICE[0] = 0b00000000;
-	CTRL_REG_DEVICE[0] = 0b00001000;
-	CTRL_REG_DEVICE[0] = 0b00000000;
-
-	LIS3MDL_write_bytes(CTRL_REG1_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
+	return 0.0;
 }
 
-/**
-  * @brief  Function for reading offsets of values from the sensor LIS3MDL.
-  * 		Offsets are written to their respective global variables.
-  * @retval None.
-  */
-void LIS3MDL_read_offsets() {
-	uint8_t LIS3MDL_OFFSET_REG_X[2];
-	uint8_t LIS3MDL_OFFSET_REG_Y[2];
-	uint8_t LIS3MDL_OFFSET_REG_Z[2];
-
-	LIS3MDL_read_bytes(OFFSET_X_REG_L_M_ADDRESS, LIS3MDL_offset_X, NUMBER_OF_OFFSET_REG);
-	LIS3MDL_read_bytes(OFFSET_Y_REG_L_M_ADDRESS, LIS3MDL_offset_Y, NUMBER_OF_OFFSET_REG);
-	LIS3MDL_read_bytes(OFFSET_Z_REG_L_M_ADDRESS, LIS3MDL_offset_Z, NUMBER_OF_OFFSET_REG);
-
-	X_offset = LIS3MDL_OFFSET_REG_X[1] << 8;
-	X_offset |= LIS3MDL_OFFSET_REG_X[0];
-	Y_offset = LIS3MDL_OFFSET_REG_Y[1] << 8;
-	Y_offset |= LIS3MDL_OFFSET_REG_Y[0];
-	Z_offset = LIS3MDL_OFFSET_REG_Z[1] << 8;
-	Z_offset |= LIS3MDL_OFFSET_REG_Z[0];
-}
