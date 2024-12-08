@@ -41,12 +41,38 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+float ISRLoad[2];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
+static void (* SysTick_callback)(void) = 0;
+static void (* TIM2_callback)(void) = 0;
+static void (* TIM3_callback)(void) = 0;
 
+void SysTick_RegisterCallback(void *callback)
+{
+	if(callback != 0)
+	{
+		SysTick_callback = callback;
+	}
+}
+
+void TIM2_RegisterCallback(void *callback)
+{
+	if(callback != 0)
+	{
+		TIM2_callback = callback;
+	}
+}
+
+void TIM3_RegisterCallback(void *callback)
+{
+	if(callback != 0)
+	{
+		TIM3_callback = callback;
+	}
+}
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -144,7 +170,7 @@ void UsageFault_Handler(void)
 void SVC_Handler(void)
 {
   /* USER CODE BEGIN SVCall_IRQn 0 */
-
+	SysTickCountUp();
   /* USER CODE END SVCall_IRQn 0 */
   /* USER CODE BEGIN SVCall_IRQn 1 */
 
@@ -183,7 +209,9 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+	LL_GPIO_SetOutputPin(GPIOA, TESTPIN_3_Pin);
+	SysTickCountUp();
+	LL_GPIO_ResetOutputPin(GPIOA, TESTPIN_3_Pin);
   /* USER CODE END SysTick_IRQn 0 */
 
   /* USER CODE BEGIN SysTick_IRQn 1 */
@@ -232,15 +260,30 @@ void DMA1_Channel7_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-	if (LL_TIM_IsActiveFlag_UPDATE(TIM2)) {
-		LL_TIM_ClearFlag_UPDATE(TIM2); // Clear the interrupt flag
-	// Your code here (e.g., toggle an LED)
+	if (LL_TIM_IsActiveFlag_UPDATE(TIM2))	// Check if i am in correct IRQHandler
+	{
+		// Start of IRQ
+		SystemTime startTime = LL_GetTick();
+		LL_GPIO_SetOutputPin(GPIOB, TESTPIN_1_Pin);
+
+		// Main code of IRQ
+		if(TIM2_callback != 0)
+			TIM2_callback();
+
+		// End of IRQ
+		SystemTime endTime = LL_GetTick();
+		int32_t elapsedTicks = (endTime.msTicks - startTime.msTicks) * 1000 + (endTime.usTicks - startTime.usTicks);
+		if (elapsedTicks < 0)
+		    elapsedTicks += 1000; // Add 1 msecond in microseconds
+		ISRLoad[0] = elapsedTicks / (8.333333333 * 1000.0);
+		LL_GPIO_ResetOutputPin(GPIOB, TESTPIN_1_Pin);
+
+		// Clear the interrupt flag
+		LL_TIM_ClearFlag_UPDATE(TIM2);
 	}
-	LL_GPIO_SetOutputPin(GPIOB, TIM2_TESTPIN_Pin);
   /* USER CODE END TIM2_IRQn 0 */
   /* USER CODE BEGIN TIM2_IRQn 1 */
-	asm("NOP");
-	LL_GPIO_ResetOutputPin(GPIOB, TIM2_TESTPIN_Pin);
+
   /* USER CODE END TIM2_IRQn 1 */
 }
 
@@ -250,15 +293,30 @@ void TIM2_IRQHandler(void)
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
-	if (LL_TIM_IsActiveFlag_UPDATE(TIM3)) {
-		LL_TIM_ClearFlag_UPDATE(TIM3); // Clear the interrupt flag
-	// Your code here (e.g., toggle an LED)
+	if (LL_TIM_IsActiveFlag_UPDATE(TIM3))	// Check if i am in correct IRQHandler
+	{
+		// Start of IRQ
+		SystemTime startTime = LL_GetTick();
+		LL_GPIO_SetOutputPin(GPIOB, TESTPIN_2_Pin);
+
+		// Main code of IRQ
+		if(TIM3_callback != 0)
+			TIM3_callback();
+
+		// End of IRQ
+		SystemTime endTime = LL_GetTick();
+		int32_t elapsedTicks = (endTime.msTicks - startTime.msTicks) * 1000 + (endTime.usTicks - startTime.usTicks);
+		if (elapsedTicks < 0)
+			elapsedTicks += 1000; // Add 1 msecond in microseconds
+		ISRLoad[1] = elapsedTicks / (50 * 1000.0);
+		LL_GPIO_ResetOutputPin(GPIOB, TESTPIN_2_Pin);
+
+		// Clear the interrupt flag
+		LL_TIM_ClearFlag_UPDATE(TIM3);
 	}
-	LL_GPIO_SetOutputPin(GPIOB, TIM3_TESTPIN_Pin);
   /* USER CODE END TIM3_IRQn 0 */
   /* USER CODE BEGIN TIM3_IRQn 1 */
-	asm("NOP");
-	LL_GPIO_ResetOutputPin(GPIOB, TIM3_TESTPIN_Pin);
+
   /* USER CODE END TIM3_IRQn 1 */
 }
 
