@@ -44,15 +44,26 @@ void MX_GPIO_Init(void)
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOB);
 
   /**/
-  LL_GPIO_ResetOutputPin(GPIOB, TIM2_TESTPIN_Pin|TIM3_TESTPIN_Pin);
+  LL_GPIO_ResetOutputPin(GPIOB, TESTPIN_1_Pin|TESTPIN_2_Pin);
 
   /**/
-  GPIO_InitStruct.Pin = TIM2_TESTPIN_Pin|TIM3_TESTPIN_Pin;
+  LL_GPIO_ResetOutputPin(GPIOA, TESTPIN_3_Pin|TESTPIN_4_Pin);
+
+  /**/
+  GPIO_InitStruct.Pin = TESTPIN_1_Pin|TESTPIN_2_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /**/
+  GPIO_InitStruct.Pin = TESTPIN_3_Pin|TESTPIN_4_Pin;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = ACT_SWITCH_Pin|ARM_SWITCH_Pin;

@@ -47,7 +47,7 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stm32f3xx_it.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -73,10 +73,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define TIM2_TESTPIN_Pin LL_GPIO_PIN_0
-#define TIM2_TESTPIN_GPIO_Port GPIOB
-#define TIM3_TESTPIN_Pin LL_GPIO_PIN_1
-#define TIM3_TESTPIN_GPIO_Port GPIOB
+#define TESTPIN_1_Pin LL_GPIO_PIN_0
+#define TESTPIN_1_GPIO_Port GPIOB
+#define TESTPIN_2_Pin LL_GPIO_PIN_1
+#define TESTPIN_2_GPIO_Port GPIOB
+#define TESTPIN_3_Pin LL_GPIO_PIN_8
+#define TESTPIN_3_GPIO_Port GPIOA
+#define TESTPIN_4_Pin LL_GPIO_PIN_11
+#define TESTPIN_4_GPIO_Port GPIOA
 #define ACT_SWITCH_Pin LL_GPIO_PIN_4
 #define ACT_SWITCH_GPIO_Port GPIOB
 #define ARM_SWITCH_Pin LL_GPIO_PIN_5
