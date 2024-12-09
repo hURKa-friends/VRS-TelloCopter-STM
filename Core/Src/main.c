@@ -28,8 +28,6 @@
 /* USER CODE BEGIN Includes */
 #include "LSM6DS0.h"
 #include "LIS3MDL.h"
-
-#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,12 +37,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-float x;
-float y;
-float z;
-uint8_t lsm6ds0_status;
-uint8_t tx_data2[26];
-float current_angle = 0.0;
+#define MAX_GYRO_BUFFER		8
+uint8_t gyroDataCounter = 0;
+float gyroX[MAX_GYRO_BUFFER];
+float gyroY[MAX_GYRO_BUFFER];
+float gyroZ[MAX_GYRO_BUFFER];
+float gyroMeanValues[3];
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -66,18 +64,67 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/* TODO: KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
+float SimpleMean(float *gyroValue, uint8_t maximum)
+{
+	float gyroSum = 0;
+	for(int i = 1; i < maximum; i++)
+	{
+		gyroSum += gyroValue[i];
+	}
+	float mean = gyroSum / maximum;
+	return mean;
+}
+/* KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
+
+/**
+  * @brief   Main interrupt handler for TIM2. Handles gyroscope data acquisition.
+  * @details This function should be used for I2C handling.
+  * @note    This interrupt handler is called with period T_TIM2 = 8.333 ms (120 Hz).
+  * @retval  None
+  */
 void TIM2_IRQ_main(void)
 {
-	// TODO: I2C Read logic - T = 8.333ms
-	y = LSM6DS0_readXGyroRegister(y);
-	z = LSM6DS0_readXGyroRegister(z);
+	// TODO: Implement I2C Read logic
+	uint16_t rawGyroX, rawGyroY, rawGyroZ;
+	LSM6DS0_get_gyro(&rawGyroX, &rawGyroY, &rawGyroZ);
+	gyroX[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroX);
+	gyroY[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroY);
+	gyroZ[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroZ);
+
+	/* TODO: KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
+	gyroMeanValues[0] = SimpleMean((float *)gyroX, MAX_GYRO_BUFFER);
+	gyroMeanValues[1] = SimpleMean((float *)gyroY, MAX_GYRO_BUFFER);
+	gyroMeanValues[2] = SimpleMean((float *)gyroZ, MAX_GYRO_BUFFER);
+	/* KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
+
+	gyroDataCounter++;
+	if(gyroDataCounter >= MAX_GYRO_BUFFER)
+		gyroDataCounter = 0;
 }
 
+/**
+  * @brief   Main interrupt handler for TIM3.
+  * @details This function should be used for data processing and USART handling.
+  * @note    This interrupt handler is called with period T_TIM3 = 50 ms (20 Hz).
+  * @retval  None
+  */
 void TIM3_IRQ_main(void)
 {
-	// TODO: USART logic + Data Processing - T = 50ms
-	current_angle = update_angle(current_angle);
-	formatAndSaveToCSV(current_angle, y, z);
+	// TODO: USART logic + Data Processing
+}
+
+/**
+  * @brief   Main cycle handler for the system.
+  * @details Should be used for data processing.
+  * @retval  None
+  */
+void SystemMainCycleRoutine(void)
+{
+	LL_GPIO_SetOutputPin(GPIOA, TESTPIN_4_Pin);
+	asm("#NOP");
+	// TODO: Possible Data Processing ??
+	LL_GPIO_ResetOutputPin(GPIOA, TESTPIN_4_Pin);
 }
 /* USER CODE END 0 */
 
@@ -124,27 +171,30 @@ int main(void)
   MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
-  TIM2_RegisterCallback(TIM2_IRQ_main);
-  TIM3_RegisterCallback(TIM3_IRQ_main);
+  for (int i = 0; i < MAX_GYRO_BUFFER; i++)
+  {
+	gyroX[gyroDataCounter] = 0;
+	gyroY[gyroDataCounter] = 0;
+	gyroZ[gyroDataCounter] = 0;
+  }
 
-  LSM6DS0_registerReadCallback(I2C1_MultiByteRead);
-  LSM6DS0_registerWriteCallback(I2C1_MultiByteWrite);
-  LSM6DS0_init();
+  LSM6DS0_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
 
+  /* TODO: Change sensor initialization
   LIS3MDL_registerReadCallback(I2C1_MultiByteRead);
   LIS3MDL_registerWriteCallback(I2C1_MultiByteWrite);
   LIS3MDL_init();
+  */
+
+  TIM2_RegisterCallback(TIM2_IRQ_main);
+  TIM3_RegisterCallback(TIM3_IRQ_main);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		// TODO: Possible Data Processing ??
-
-		LL_GPIO_SetOutputPin(GPIOA, TESTPIN_4_Pin);
-		asm("#NOP");
-		LL_GPIO_ResetOutputPin(GPIOA, TESTPIN_4_Pin);
+		SystemMainCycleRoutine();
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
@@ -194,28 +244,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void formatAndSaveToCSV(float current_angle, float y, float z)
-{
-    // Buffers to hold formatted strings
-    char forx[6];
-    char fory[6];
-    char forz[6];
 
-    // Clear tx_data2 buffer
-    memset(tx_data2, '\0', sizeof(tx_data2));
-
-    // Format each value with the specified precision
-    snprintf(forx, sizeof(forx), "%.2f", current_angle);
-    snprintf(fory, sizeof(fory), "%.2f", y);
-    snprintf(forz, sizeof(forz), "%.2f", z);
-
-    // Combine formatted values into tx_data2
-    snprintf((char *)tx_data2, sizeof(tx_data2), "%s,%s,%s\r", forx, fory, forz);
-
-    // Send tx_data2 buffer via USART2
-    // TODO: Implement USART
-    // USART2_PutBuffer(tx_data2, strlen((char *)tx_data2)); // Use strlen for accurate size
-}
 /* USER CODE END 4 */
 
 /**

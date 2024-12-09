@@ -9,7 +9,7 @@
 #include "usart.h"
 
 // Global variables
-uint8_t LIS3MDL_DEVICE_ADDRESS;
+//uint8_t LIS3MDL_DEVICE_ADDRESS;
 
 int16_t X_offset;
 int16_t Y_offset;
@@ -118,7 +118,7 @@ void LIS3MDL_init()
 {
 	uint8_t who_am_i_value;
 
-	if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_H, LIS3MDL_WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
+	/*if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_H, LIS3MDL_WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
 		LIS3MDL_DEVICE_ADDRESS = LIS3MDL_DEVICE_ADDRESS_H;
 	}
 	else if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_L, LIS3MDL_WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
@@ -128,7 +128,7 @@ void LIS3MDL_init()
 	{
 		//USART_write("LIS3MDL Init failed.");/////////////////
 		return;
-	}
+	}*/
 
 	if (who_am_i_value != LIS3MDL_WHO_AM_I_VALUE)
 	{

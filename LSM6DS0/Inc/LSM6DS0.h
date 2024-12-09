@@ -11,35 +11,33 @@
 #include "main.h"
 #include "LSM6DS0_map.h"
 
+typedef enum {
+	DISCONNECTED = 0x00U,
+	CONNECTED	 = 0x01U,
+	INITIALIZED  = 0x04U,
+	I2C_ERROR    = 0x08U
+} LSM6DS0_state;
+
 /* Special Macros END */
 #define NUMBER_OF_CTRL_REG			3
-#define NUMBER_OF_OUT_REG			2
-#define FLOAT_SIZE_IN_BITS		   (8 * sizeof(float))
+#define GYRO_REG_COUNT				6
+#define ACCL_REG_COUNT				6
 /* Special Macros END */
 
 /* USER CODE BEGIN Prototypes */
-void LSM6DS0_registerReadCallback(void *callback);
-void LSM6DS0_registerWriteCallback(void *callback);
-
 uint8_t LSM6DS0_read_byte(uint8_t register_address);
 void LSM6DS0_read_array(uint8_t register_address, uint8_t* data, uint8_t length);
 void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte_value);
 void LSM6DS0_write_array(uint8_t register_address, uint8_t* data, uint8_t length);
 
-void LSM6DS0_init();
-void LSM6DS0_set_registers();
+void LSM6DS0_init(void *readCallback, void *writeCallback);
+void LSM6DS0_init_registers();
+uint8_t LSM6DS0_get_device_state(void);
 
-void LSM6DS0_get_accl_bytes(int16_t accl_bytes[]);
-void LSM6DS0_get_gyro_bytes(float gyro_bytes[]);
-
-float LSM6DS0_readXGyroRegister(float x);
-float LSM6DS0_readYGyroRegister(float y);
-float LSM6DS0_readZGyroRegister(float z);
-
-float calculate_angle(float current_angle, float angular_velocity, float dt);
-float update_angle(float current_angle);
-
-float LSM6DS0_OUT_to_float(uint8_t MSB, uint8_t LSB);
+void LSM6DS0_get_accl(uint16_t *rawAcclX, uint16_t *rawAcclY, uint16_t *rawAcclZ);
+void LSM6DS0_get_gyro(uint16_t *rawGyroX, uint16_t *rawGyroY, uint16_t *rawGyroZ);
+float LSM6DS0_parse_accl_data(uint16_t rawAccl);
+float LSM6DS0_parse_gyro_data(uint16_t rawGyro);
 /* USER CODE END Prototypes */
 
 #endif /* LSM6DS0_INC_LSM6DS0_H_ */

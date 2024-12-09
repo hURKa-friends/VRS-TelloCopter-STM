@@ -6,10 +6,9 @@
   */
 
 #include "LSM6DS0.h"
-#include "usart.h"
 
 // Global variables
-uint8_t LSM6DS0_DEVICE_ADDRESS;
+LSM6DS0_state deviceState = DISCONNECTED;
 
 /**
   * @brief  Pointer to a function that reads data from an I2C slave device.
@@ -20,20 +19,7 @@ uint8_t LSM6DS0_DEVICE_ADDRESS;
   * @param  num_of_bytes: number of bytes to read.
   * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
   */
-static uint8_t (* LSM6DS0_read)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
-
-/**
-  * @brief  Function for registering reading callback function.
-  * @param  callback: function to be registered as callback function.
-  * @retval None.
-  */
-void LSM6DS0_registerReadCallback(void *callback)
-{
-	if(callback != 0)
-	{
-		LSM6DS0_read = callback;
-	}
-}
+static uint8_t (* I2C_ReadData)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
 /**
   * @brief  Pointer to a function that writes data to an I2C slave device.
@@ -44,20 +30,7 @@ void LSM6DS0_registerReadCallback(void *callback)
   * @param  num_of_bytes: number of bytes to write.
   * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
   */
-static uint8_t (* LSM6DS0_write)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
-
-/**
-  * @brief  Function for registering writing callback function.
-  * @param  callback: function to be registered as callback function.
-  * @retval None.
-  */
-void LSM6DS0_registerWriteCallback(void *callback)
-{
-	if(callback != 0)
-	{
-		LSM6DS0_write = callback;
-	}
-}
+static uint8_t (* I2C_WriteData)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
 /**
   * @brief  Reads a single byte from the specified register on the LSM6DS0 sensor.
@@ -66,8 +39,10 @@ void LSM6DS0_registerWriteCallback(void *callback)
   */
 uint8_t LSM6DS0_read_byte(uint8_t register_address)
 {
-	uint8_t byte;
-	LSM6DS0_read(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
+	uint8_t i2cState = 0, byte = 0;
+	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
+	if(i2cState != 0)
+		deviceState = I2C_ERROR;
 	return byte;
 }
 
@@ -80,7 +55,10 @@ uint8_t LSM6DS0_read_byte(uint8_t register_address)
   */
 void LSM6DS0_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
 {
-	LSM6DS0_read(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	uint8_t i2cState = 0;
+	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	if(i2cState != 0)
+		deviceState = I2C_ERROR;
 }
 
 /**
@@ -91,7 +69,10 @@ void LSM6DS0_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_o
   */
 void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte)
 {
-	LSM6DS0_write(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
+	uint8_t i2cState = 0;
+	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
+	if(i2cState != 0)
+		deviceState = I2C_ERROR;
 }
 
 /**
@@ -103,71 +84,68 @@ void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte)
   */
 void LSM6DS0_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
 {
-	LSM6DS0_write(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	uint8_t i2cState = 0;
+	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	if(i2cState != 0)
+		deviceState = I2C_ERROR;
 }
 
 /**
   * @brief  Function for initializing the sensor LSM6DS0.
   * @retval None.
   */
-void LSM6DS0_init()
+void LSM6DS0_init(void *readCallback, void *writeCallback)
 {
-	uint8_t who_am_i_value;
+	// Register Generic Read Callback
+	if(readCallback != 0)
+		I2C_ReadData = readCallback;
+	// Register Generic Write Callback
+	if(writeCallback != 0)
+		I2C_WriteData = writeCallback;
 
-	if (!LSM6DS0_read(LSM6DS0_DEVICE_ADDRESS_H, LSM6DS0_WHO_AM_I_ADDRESS, &who_am_i_value, 1))
-	{
-		LSM6DS0_DEVICE_ADDRESS = LSM6DS0_DEVICE_ADDRESS_H;
-	}
-	else if (!LSM6DS0_read(LSM6DS0_DEVICE_ADDRESS_L, LSM6DS0_WHO_AM_I_ADDRESS, &who_am_i_value, 1))
-	{
-		LSM6DS0_DEVICE_ADDRESS = LSM6DS0_DEVICE_ADDRESS_L;
-	}
-	else
-	{
-		//USART_write("LSM6DS0 Init failed.");/////////////////
-		return;
-	}
+	// Check if correct device is connected
+	if(LSM6DS0_read_byte(LSM6DS0_WHO_AM_I_ADDRESS) == LSM6DS0_WHO_AM_I_VALUE)
+		deviceState = CONNECTED;
 
-	if (who_am_i_value != LSM6DS0_WHO_AM_I_VALUE)
-	{
-		//USART_write("LSM6DS0 Init failed.");/////////////////
-		return;
-	}
+	if (deviceState != CONNECTED)
+		return; // LSM6DS0 Init failed.
 
-	LSM6DS0_set_registers();
-
-	//USART_write("LSM6DS0 Init successful.");////////////////////
+	LSM6DS0_init_registers();
+	deviceState = INITIALIZED;
+	return;  // LSM6DS0 Init succes.
 }
 
 /**
   * @brief  Function for setting control registers of the sensor LSM6DS0.
   * @retval None.
   */
-void LSM6DS0_set_registers()
+void LSM6DS0_init_registers()
 {
-	uint8_t CTRL_REG_DEVICE[NUMBER_OF_CTRL_REG];
-	uint8_t CTRL_REG_GYRO[NUMBER_OF_CTRL_REG];
-	uint8_t CTRL_REG_ACCL[NUMBER_OF_CTRL_REG];
+	uint8_t CTRL_REG_DEVICE[NUMBER_OF_CTRL_REG];  	// CTRL_REG8 0x22 -> CTRL_REG10 0x24
+	uint8_t CTRL_REG_GYRO[NUMBER_OF_CTRL_REG];		// CTRL_REG1 0x10 -> CTRL_REG3 0x12
+	uint8_t CTRL_REG_ACCL[NUMBER_OF_CTRL_REG];  	// CTRL_REG5 0x1F -> CTRL_REG7 0x21
 
-	/*
-	 * TODO
-	 * decimation
-	 * full-scale selection
-	 * frequency cutoff, high/low pass filters,
-	 * ORIENT_CFG_G
-	 */
+	/**
+	  ******************************************************************************
+	  * TODO: LSM6DS0 CTRL_REG initialization such as:
+	  * - decimation
+	  * - full-scale selection
+	  * - frequency cutoff, high/low pass filters,
+	  * - ORIENT_CFG_G
+	  ******************************************************************************
+	  */
 
-	CTRL_REG_DEVICE[0] = 0b11000000; // Úprava podľa Denisa 0xC0U
-	CTRL_REG_DEVICE[1] = 0b00000000;
-	CTRL_REG_DEVICE[2] = 0b00000000;
+	CTRL_REG_DEVICE[0] = 0b01000000; // Set CTRL_REG8  0x22 = 0b0100 0000 (Block Data Update)
+	CTRL_REG_DEVICE[1] = 0b00000000; // Set CTRL_REG9  0x23 = 0b0000 0000 (Default)
+	CTRL_REG_DEVICE[2] = 0b00000000; // Set CTRL_REG10 0x24 = 0b0000 0000 (Default)
 
-	CTRL_REG_GYRO[0] = 0b10000010;
-	CTRL_REG_GYRO[1] = 0b00000000;
-	CTRL_REG_GYRO[2] = 0b00000000;
+	CTRL_REG_GYRO[0] = 0b10000000;	 // Set CTRL_REG1G 0x10 = 0b1000 0010 (ODR 238Hz, Cutoff 14Hz, 245dsp)
+	CTRL_REG_GYRO[1] = 0b00000000;	 // Set CTRL_REG2G 0x11 = 0b0000 0000 (Default)
+	CTRL_REG_GYRO[2] = 0b00000000;	 // Set CTRL_REG3G 0x12 = 0b0000 0000 (Default)
 
-	CTRL_REG_ACCL[0] = 0b01111000;
-	CTRL_REG_ACCL[1] = 0b00010000;
-	CTRL_REG_ACCL[2] = 0b11000100;
+	CTRL_REG_ACCL[0] = 0b01111000;	 // Set CTRL_REG5A 0x1F = 0b0111 1000 (Update per 2 samples, XYZ enable, )
+	CTRL_REG_ACCL[1] = 0b10000000;	 // Set CTRL_REG6A 0x20 = 0b1001 1000 (ODR 238Hz, Range +-8G, Anti-alias 408Hz)
+	CTRL_REG_ACCL[2] = 0b00000000;	 // Set CTRL_REG7A 0x21 = 0b0000 0000 (Default)
 
 	LSM6DS0_write_bytes(LSM6DS0_CTRL_REG8_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
 	LSM6DS0_write_bytes(LSM6DS0_CTRL_REG1_G_ADDRESS, CTRL_REG_GYRO, NUMBER_OF_CTRL_REG);
@@ -175,141 +153,72 @@ void LSM6DS0_set_registers()
 }
 
 /**
-  * @brief  Function for receiving data from acceleration sensor of the LSM6DS0.
-  * @param	accl_bytes: array where data will be written.
-  * 		[0]: value in X axis
-  * 		[1]: value in Y axis
-  * 		[2]: value in Z axis
-  * @retval None.
+  * @brief  Retrieves the current state of the LSM6DS0 device.
+  * @retval The current state of the device as a value of type `LSM6DS0_state`.
+  * @note   The state indicates whether the device is connected, initialized, or has encountered an I2C error.
   */
-void LSM6DS0_get_accl_bytes(int16_t accl_bytes[])
+uint8_t LSM6DS0_get_device_state(void)
 {
-	uint8_t OUT_X[NUMBER_OF_OUT_REG];
-	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
-	uint8_t OUT_Z[NUMBER_OF_OUT_REG];
-
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_XL_ADDRESS, OUT_X, NUMBER_OF_OUT_REG);
-	LSM6DS0_read_bytes(LSM6DS0_OUT_Y_L_XL_ADDRESS, OUT_Y, NUMBER_OF_OUT_REG);
-	LSM6DS0_read_bytes(LSM6DS0_OUT_Z_L_XL_ADDRESS, OUT_Z, NUMBER_OF_OUT_REG);
-
-	accl_bytes[0] = LSM6DS0_OUT_to_float(OUT_X[1], OUT_X[0]);
-	accl_bytes[1] = LSM6DS0_OUT_to_float(OUT_Y[1], OUT_Y[0]);
-	accl_bytes[2] = LSM6DS0_OUT_to_float(OUT_Z[1], OUT_Z[0]);
+	return deviceState;
 }
 
 /**
-  * @brief  Function for receiving data from gyroscope sensor of the LSM6DS0.
-  * @param	gyro_bytes: array where data will be written.
-  * 		[0]: value in X axis
-  * 		[1]: value in Y axis
-  * 		[2]: value in Z axis
-  * @retval None.
+  * @brief  Reads raw accelerometer data from the LSM6DS0 sensor.
+  * @param  rawAcclX: Pointer to store the raw X-axis accelerometer data.
+  * @param  rawAcclY: Pointer to store the raw Y-axis accelerometer data.
+  * @param  rawAcclZ: Pointer to store the raw Z-axis accelerometer data.
+  * @retval None
   */
-void LSM6DS0_get_gyro_bytes(float gyro_bytes[])
+void LSM6DS0_get_accl(uint16_t *rawAcclX, uint16_t *rawAcclY, uint16_t *rawAcclZ)
 {
-	uint8_t OUT_X[NUMBER_OF_OUT_REG];
-	uint8_t OUT_Y[NUMBER_OF_OUT_REG];
-	uint8_t OUT_Z[NUMBER_OF_OUT_REG];
+	uint8_t rawAcclOut[ACCL_REG_COUNT];
+	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
 
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, OUT_X, NUMBER_OF_OUT_REG);
-	LSM6DS0_read_bytes(LSM6DS0_OUT_Y_L_G_ADDRESS, OUT_Y, NUMBER_OF_OUT_REG);
-	LSM6DS0_read_bytes(LSM6DS0_OUT_Z_L_G_ADDRESS, OUT_Z, NUMBER_OF_OUT_REG);
-
-	gyro_bytes[0] = LSM6DS0_OUT_to_float(OUT_X[1], OUT_X[0]);
-	gyro_bytes[1] = LSM6DS0_OUT_to_float(OUT_Y[1], OUT_Y[0]);
-	gyro_bytes[2] = LSM6DS0_OUT_to_float(OUT_Z[1], OUT_Z[0]);
+	*rawAcclX = (uint16_t)(((uint16_t)(rawAcclOut[0]) << 0) |
+	 	 	   	   	   	   ((uint16_t)(rawAcclOut[1]) << 8));
+	*rawAcclY = (uint16_t)(((uint16_t)(rawAcclOut[2]) << 0) |
+	 	 	   	   	   	   ((uint16_t)(rawAcclOut[3]) << 8));
+	*rawAcclZ = (uint16_t)(((uint16_t)(rawAcclOut[4]) << 0) |
+	 	 	   	   	   	   ((uint16_t)(rawAcclOut[5]) << 8));
 }
-
-float LSM6DS0_readXGyroRegister(float x)
-{
-	uint8_t temp[2];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, temp, 2);
-
-	int16_t gyro_x = (temp[1] << 8) | temp[0];
-
-	float x_temp = (float) gyro_x;
-
-	x = ((x_temp * 8.75) / 1000.0);
-
-	return x;
-}
-
-float LSM6DS0_readYGyroRegister(float y)
-{
-	uint8_t tempy[2];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_Y_L_G_ADDRESS, tempy, 2);
-
-	int16_t gyro_y = (tempy[1] << 8) | tempy[0];
-
-	float y_temp = (float) gyro_y;
-	y = ((y_temp * 8.75) / 1000.0);
-
-	return y;
-}
-
-float LSM6DS0_readZGyroRegister(float z)
-{
-	uint8_t tempz[2];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_Z_L_G_ADDRESS, tempz, 2);
-
-	int16_t gyro_z = (tempz[1] << 8) | tempz[0];
-
-	float z_temp = (float) gyro_z;
-	z = ((z_temp * 8.75) / 1000.0);
-
-	return z;
-}
-
-float calculate_angle(float current_angle, float angular_velocity, float dt)
-{
-    current_angle += angular_velocity * dt;
-    return current_angle;
-}
-
-float update_angle(float current_angle)
-{
-    static uint32_t prev_time = 0;
-
-    // Read the angular velocity
-    float angular_velocity_x = LSM6DS0_readXGyroRegister(0.0);
-
-    // Get the current time in milliseconds
-    uint32_t curr_time = LL_usGetTick();
-
-    // Calculate the time difference in seconds
-    float dt = (curr_time - prev_time) / 1000.0f;  // Convert ms to seconds
-
-    float angle_x;
-
-    if (dt > 0) {  // Ensure no division by zero
-        angle_x = calculate_angle(current_angle, angular_velocity_x, dt);
-    }
-
-    // Update the previous time
-    prev_time = curr_time;
-    return angle_x;
-}
-
 
 /**
-  * @brief  Converts two registers to 2's complement floating-point value.
-  * @param	MSB: most significant byte of the two registers.
-  * @param  LSB: least significant byte of the two registers.
-  * @retval Value of the two registers as float.
+  * @brief  Reads raw gyroscope data from the LSM6DS0 sensor.
+  * @param  rawGyroX: Pointer to store the raw X-axis gyroscope data.
+  * @param  rawGyroY: Pointer to store the raw Y-axis gyroscope data.
+  * @param  rawGyroZ: Pointer to store the raw Z-axis gyroscope data.
+  * @retval None
   */
-float LSM6DS0_OUT_to_float(uint8_t MSB, uint8_t LSB)
+void LSM6DS0_get_gyro(uint16_t *rawGyroX, uint16_t *rawGyroY, uint16_t *rawGyroZ)
 {
-	float value;
-	uint8_t sign = (MSB >> 7) & 1;
+	uint8_t rawGyroOut[GYRO_REG_COUNT];
+	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, rawGyroOut, sizeof(rawGyroOut));
 
-	// TODO: Vracia mi chyby ? Neviem skompilovat ??
-	/*
-	 * value = sign << (FLOAT_SIZE_IN_BITS - 1);
-	 * value |= MSB << 8;
-	 * value &= ~(1 << 16);
-	 * value |= LSB;
-	 *
-	 */
+	*rawGyroX = (uint16_t)(((uint16_t)(rawGyroOut[0]) << 0) |
+	 	 	   	   	   	   ((uint16_t)(rawGyroOut[1]) << 8));
+	*rawGyroY = (uint16_t)(((uint16_t)(rawGyroOut[2]) << 0) |
+	 	 	   	   	   	   ((uint16_t)(rawGyroOut[3]) << 8));
+	*rawGyroZ = (uint16_t)(((uint16_t)(rawGyroOut[4]) << 0) |
+	 	 	   	   	   	   ((uint16_t)(rawGyroOut[5]) << 8));
+}
 
-	return value;
+/**
+  * @brief TODO: Implement accl data parsing
+  */
+float LSM6DS0_parse_accl_data(uint16_t rawAccl)
+{
+	return 0.0;
+}
+
+/**
+  * @brief  Converts raw gyroscope data to a scaled value in degrees per second.
+  * @param  rawGyro: The raw gyroscope data (16-bit value) read from the sensor.
+  * @retval The gyroscope value scaled to degrees per second as a floating-point value.
+  */
+float LSM6DS0_parse_gyro_data(uint16_t rawGyro)
+{
+	float scalingFactor = 8.75; // in mili degrees per second / LSB
+	float toDegrees = 1000.0;	// conversion to degrees
+	float gyroValue = ((((float)rawGyro) * scalingFactor) / toDegrees);
+	return gyroValue;
 }

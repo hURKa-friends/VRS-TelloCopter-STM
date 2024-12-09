@@ -9,8 +9,9 @@
 #define LSM6DS0_INC_LSM6DS0_MAP_H_
 
 /* I2C sensor general defines BEGIN */
-#define 	LSM6DS0_DEVICE_ADDRESS_H			(0x6B << 1)
-#define 	LSM6DS0_DEVICE_ADDRESS_L			(0x6A << 1)
+#define 	LSM6DS0_DEVICE_ADDRESS_W			0xD6U
+#define 	LSM6DS0_DEVICE_ADDRESS_R			0xD7U
+#define 	LSM6DS0_DEVICE_ADDRESS				LSM6DS0_DEVICE_ADDRESS_W
 /* I2C sensor general defines END */
 
 /* Register values BEGIN */
