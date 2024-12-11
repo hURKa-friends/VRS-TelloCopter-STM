@@ -259,7 +259,7 @@ void LSM6DS0_get_gyro(uint16_t *rawGyroX, uint16_t *rawGyroY, uint16_t *rawGyroZ
   */
 float LSM6DS0_parse_accl_data(uint16_t rawAccl)
 {
-	float acclValue = ((float)rawGyro) * accl_scaler;
+	float acclValue = ((float)rawAccl) * accl_scaler;
 	return acclValue;
 }
 
