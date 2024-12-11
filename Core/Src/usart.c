@@ -21,7 +21,9 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
+#include <string.h>
 
+char msg2[100];
 /* USER CODE END 0 */
 
 /* USART2 init function */
@@ -85,6 +87,12 @@ void MX_USART2_UART_Init(void)
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_7, LL_DMA_MDATAALIGN_BYTE);
 
+  LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_7, LL_USART_DMA_GetRegAddr(USART2, LL_USART_DMA_REG_DATA_TRANSMIT));
+
+  LL_USART_EnableDMAReq_TX(USART2);
+
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_7);
+
   /* USER CODE BEGIN USART2_Init 1 */
 
   /* USER CODE END USART2_Init 1 */
@@ -106,5 +114,63 @@ void MX_USART2_UART_Init(void)
 }
 
 /* USER CODE BEGIN 1 */
+/**
+  * @brief  Send data stored in buffer with DMA.
+  * @param  buffer: Buffer of data to send.
+  * @param  length: Length of buffer.
+  * @retval None.
+  */
+void USART2_PutBuffer(uint8_t *buffer, uint8_t length)
+{
+	LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_7, (uint32_t)buffer);
 
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_7, length);
+
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_7);
+
+	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_7);
+}
+
+/**
+  * @brief  Send string command to USART2.
+  * @param  command: Character array containing command.
+  * 		List of commands:
+  * 		- ARM -
+  * 		- DISARM -
+  * 		- FLIP -
+  * @retval None.
+  */
+void USART2_send_command(char command[]) {
+	sprintf(msg2, "%s\n\r", command);
+
+	USART2_PutBuffer(msg2, strlen(msg2));
+}
+
+/**
+  * @brief  Send sensor data to USART2 in CSV format.
+  * @param  gyro: Filtered data from gyroscope stored in an array.
+  * 		[0] - X axis
+  * 		[1] - Y axis
+  * 		[2] - Z axis
+  * @param  accl: Filtered data from accelerometer stored in an array.
+  * 		[0] - X axis
+  * 		[1] - Y axis
+  * 		[2] - Z axis
+  * @param  mag: Filtered data from magnetic sensor stored in an array.
+  * 			 To disable sending of magnetic data, set this parameter to 0;
+  * 		[0] - X axis
+  * 		[1] - Y axis
+  * 		[2] - Z axis
+  * @retval None.
+  */
+void USART2_send_data(float gyro[], float accl[], float mag[]) {
+	if (mag != 0) {
+		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2], mag[0], mag[1], mag[2]);
+	}
+	else {
+		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2]);
+	}
+
+	USART2_PutBuffer((uint8_t *) msg2, strlen(msg2));
+}
 /* USER CODE END 1 */
