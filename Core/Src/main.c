@@ -68,7 +68,7 @@ void SystemClock_Config(void);
 float SimpleMean(float *gyroValue, uint8_t maximum)
 {
 	float gyroSum = 0;
-	for(int i = 1; i < maximum; i++)
+	for(int i = 0; i < maximum; i++)
 	{
 		gyroSum += gyroValue[i];
 	}
@@ -86,7 +86,7 @@ float SimpleMean(float *gyroValue, uint8_t maximum)
 void TIM2_IRQ_main(void)
 {
 	// TODO: Implement I2C Read logic
-	uint16_t rawGyroX, rawGyroY, rawGyroZ;
+	int16_t rawGyroX, rawGyroY, rawGyroZ;
 	LSM6DS0_get_gyro(&rawGyroX, &rawGyroY, &rawGyroZ);
 	gyroX[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroX);
 	gyroY[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroY);
