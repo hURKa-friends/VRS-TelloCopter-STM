@@ -18,4 +18,16 @@ float linInterpolation(float input, float inputLimLow, float inputLimHigh, float
 
 float rad2deg(float rad);
 
+void yaw_fromMag(float yaw, float magData[]);
+
+typedef enum {
+	FRONTFLIP = 0x00U,
+	BACKFLIP	 = 0x01U,
+	RIGHTFLIP  = 0x04U,
+	LEFTFLIP    = 0x08U,
+	NOFLIP 	 = 0x10U
+} flip_state;
+
+flip_state flipSensor(float gyroData[]);
+
 #endif /* INC_SENSORDATAPROCESSING_H_ */

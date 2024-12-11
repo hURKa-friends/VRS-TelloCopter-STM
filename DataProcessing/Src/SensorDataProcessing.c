@@ -15,6 +15,11 @@ void calculate_angles(float currentAngles[], float acclData[])
     currentAngles[2] =  atan(sqrt((acclData[0]*acclData[0])+(acclData[1]*acclData[1]))/acclData[2]);
 }
 
+void yaw_fromMag(float yaw, float magData[])
+{
+    yaw = atan(magData[0]/magData[1]);
+}
+
 float movingAvgFilter(float* array, uint8_t sampleCount)
 {
 	float valueSum = 0;
@@ -51,6 +56,20 @@ float linInterpolation(float input, float inputLimLow, float inputLimHigh, float
 
 	velocity = outputLimLow + ((input - inputLimLow) / (inputLimHigh - inputLimLow)) * (outputLimHigh - outputLimLow);
 	return velocity * sign;
+}
+
+flip_state flipSensor(float gyroData[]) {
+	if(gyroData[0] > 280) {
+		return FRONTFLIP;
+	} else if(gyroData[0] < -280){
+		return BACKFLIP;
+	} else if(gyroData[1] > 280) {
+		return RIGHTFLIP;
+	} else if(gyroData[1] < -280) {
+		return LEFTFLIP;
+	} else {
+		return NOFLIP;
+	}
 }
 
 float rad2deg(float rad)
