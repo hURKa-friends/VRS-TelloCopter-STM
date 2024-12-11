@@ -132,47 +132,15 @@ void USART2_PutBuffer(uint8_t *buffer, uint8_t length)
 }
 
 /**
-  * @brief  Send string command to USART2.
-  * @param  command: Character array containing command.
-  * 		List of commands:
-  * 		- ARM -
-  * 		- DISARM -
-  * 		- FLIP -
-  * @retval None.
-  */
-void USART2_send_command(char command[]) {
-	sprintf(msg2, "%s\n\r", command);
-
-	USART2_PutBuffer(msg2, strlen(msg2));
-}
-
-/**
   * @brief  Send sensor data to USART2 in CSV format.
-  * @param  gyro: Filtered data from gyroscope stored in an array.
-  * 		[0] - X axis
-  * 		[1] - Y axis
-  * 		[2] - Z axis
-  * @param  accl: Filtered data from accelerometer stored in an array.
-  * 		[0] - X axis
-  * 		[1] - Y axis
-  * 		[2] - Z axis
-  * @param  mag: Filtered data from magnetic sensor stored in an array.
-  * 			 To disable sending of magnetic data, set this parameter to 0;
-  * 		[0] - X axis
-  * 		[1] - Y axis
-  * 		[2] - Z axis
+  * @param  c_val: Command as array of characters.
+  * @param  roll_val: Control value of roll.
+  * @param  pitch_val: Control value of pitch.
+  * @param  yaw_val: Control value of yaw.
   * @retval None.
   */
-void USART2_send_data(float gyro[], float accl[], float mag[]) {
-	if (mag != 0) {
-		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2], mag[0], mag[1], mag[2]);
-	}
-	else if (mag == 0 && accl == 0) {
-		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2]);
-	}
-	else {
-		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2]);
-	}
+void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val) {
+	sprintf(msg2, "%s,%d,%d,%d\n\r",c_val, roll_val, pitch_val, yaw_val);
 
 	USART2_PutBuffer((uint8_t *) msg2, strlen(msg2));
 }

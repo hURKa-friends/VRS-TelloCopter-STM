@@ -39,8 +39,7 @@ extern "C" {
 void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-void USART2_send_command(char command[]);
-void USART2_send_data(float gyro[], float accl[], float mag[]);
+void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
