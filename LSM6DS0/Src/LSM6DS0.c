@@ -206,7 +206,7 @@ uint8_t LSM6DS0_get_device_state(void)
 void LSM6DS0_get_accl(int16_t *rawAcclX, int16_t *rawAcclY, int16_t *rawAcclZ)
 {
 	uint8_t rawAcclOut[ACCL_REG_COUNT];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
+	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_XL_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
 
 	*rawAcclX = (int16_t)(((uint16_t)(rawAcclOut[0]) << 0) |
 	 	 	   	   	   	  ((uint16_t)(rawAcclOut[1]) << 8));
@@ -237,7 +237,9 @@ void LSM6DS0_get_gyro(int16_t *rawGyroX, int16_t *rawGyroY, int16_t *rawGyroZ)
 }
 
 /**
-  * @brief TODO: Implement accl data parsing
+  * @brief  Converts raw accelerometer data to a scaled value in g.
+  * @param  rawAccl: The raw accelerometer data (16-bit value) read from the sensor.
+  * @retval The accelerometer value scaled to g as a floating-point value.
   */
 float LSM6DS0_parse_accl_data(int16_t rawAccl)
 {
