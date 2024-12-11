@@ -28,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include "LSM6DS0.h"
 #include "LIS3MDL.h"
+#include "SensorDataProcessing.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -37,17 +38,19 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MAX_GYRO_BUFFER		8
+#define MAX_DATA_BUFFER		8
 uint8_t dataCounter = 0;
-float gyroX[MAX_GYRO_BUFFER];
-float gyroY[MAX_GYRO_BUFFER];
-float gyroZ[MAX_GYRO_BUFFER];
+float gyroX[MAX_DATA_BUFFER];
+float gyroY[MAX_DATA_BUFFER];
+float gyroZ[MAX_DATA_BUFFER];
+float acclX[MAX_DATA_BUFFER];
+float acclY[MAX_DATA_BUFFER];
+float acclZ[MAX_DATA_BUFFER];
 float gyroMeanValues[3];
-
-float acclX[MAX_GYRO_BUFFER];
-float acclY[MAX_GYRO_BUFFER];
-float acclZ[MAX_GYRO_BUFFER];
 float acclMeanValues[3];
+float radAngleValues[3];
+float degAngleValues[3];
+float outputData[3];
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -69,19 +72,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-/* TODO: KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
-float SimpleMean(float *array, uint8_t maximum)
-{
-	float sum = 0;
-	for(int i = 0; i < maximum; i++)
-	{
-		sum += array[i];
-	}
-	float mean = sum / maximum;
-	return mean;
-}
-/* KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
-
 /**
   * @brief   Main interrupt handler for TIM2. Handles gyroscope data acquisition.
   * @details This function should be used for I2C handling.
@@ -90,11 +80,10 @@ float SimpleMean(float *array, uint8_t maximum)
   */
 void TIM2_IRQ_main(void)
 {
-	// TODO: Implement I2C Read logic
 	int16_t rawGyroX, rawGyroY, rawGyroZ;
-	LSM6DS0_get_gyro(&rawGyroX, &rawGyroY, &rawGyroZ);
-
 	int16_t rawAcclX, rawAcclY, rawAcclZ;
+
+	LSM6DS0_get_gyro(&rawGyroX, &rawGyroY, &rawGyroZ);
 	LSM6DS0_get_accl(&rawAcclX, &rawAcclY, &rawAcclZ);
 
 	gyroX[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroX);
@@ -105,18 +94,16 @@ void TIM2_IRQ_main(void)
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
 	acclZ[dataCounter] = LSM6DS0_parse_accl_data(rawAcclZ);
 
-	/* TODO: KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
-	gyroMeanValues[0] = SimpleMean((float *)gyroX, MAX_GYRO_BUFFER);
-	gyroMeanValues[1] = SimpleMean((float *)gyroY, MAX_GYRO_BUFFER);
-	gyroMeanValues[2] = SimpleMean((float *)gyroZ, MAX_GYRO_BUFFER);
+	gyroMeanValues[0] = movingAvgFilter((float *)gyroX, MAX_DATA_BUFFER);
+	gyroMeanValues[1] = movingAvgFilter((float *)gyroY, MAX_DATA_BUFFER);
+	gyroMeanValues[2] = movingAvgFilter((float *)gyroZ, MAX_DATA_BUFFER);
 
-	acclMeanValues[0] = SimpleMean((float *)acclX, MAX_GYRO_BUFFER);
-	acclMeanValues[1] = SimpleMean((float *)acclY, MAX_GYRO_BUFFER);
-	acclMeanValues[2] = SimpleMean((float *)acclZ, MAX_GYRO_BUFFER);
-	/* KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
+	acclMeanValues[0] = movingAvgFilter((float *)acclX, MAX_DATA_BUFFER);
+	acclMeanValues[1] = movingAvgFilter((float *)acclY, MAX_DATA_BUFFER);
+	acclMeanValues[2] = movingAvgFilter((float *)acclZ, MAX_DATA_BUFFER);
 
 	dataCounter++;
-	if(dataCounter >= MAX_GYRO_BUFFER)
+	if(dataCounter >= MAX_DATA_BUFFER)
 		dataCounter = 0;
 }
 
@@ -129,7 +116,20 @@ void TIM2_IRQ_main(void)
   */
 void TIM3_IRQ_main(void)
 {
-	// TODO: USART logic + Data Processing
+	calculate_angles(radAngleValues, acclMeanValues);
+
+	for(int i = 0; i < 3; i++)
+		degAngleValues[i] = rad2deg(radAngleValues[i]);
+
+	// X - Pitch
+	outputData[0] = linInterpolation(degAngleValues[0], 5.0, 45.0, 0, 100);
+	// Y - Roll
+	outputData[1] = linInterpolation(degAngleValues[1], 5.0, 45.0, 0, 100);
+	// Z - Yaw
+	outputData[2] = linInterpolation(degAngleValues[2], 5.0, 45.0, 0, 100);
+
+	// Send Data
+	USART2_send_data("NONE", (int8_t)outputData[1], (int8_t)outputData[0], (int8_t)outputData[2]);
 }
 
 /**
@@ -189,7 +189,7 @@ int main(void)
   MX_TIM3_Init();
 
   /* USER CODE BEGIN 2 */
-  for (int i = 0; i < MAX_GYRO_BUFFER; i++)
+  for (int i = 0; i < MAX_DATA_BUFFER; i++)
   {
 	gyroX[dataCounter] = 0;
 	gyroY[dataCounter] = 0;
@@ -199,9 +199,9 @@ int main(void)
   LSM6DS0_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
 
   /* TODO: Change sensor initialization
-  LIS3MDL_registerReadCallback(I2C1_MultiByteRead);
-  LIS3MDL_registerWriteCallback(I2C1_MultiByteWrite);
-  LIS3MDL_init();
+	  LIS3MDL_registerReadCallback(I2C1_MultiByteRead);
+	  LIS3MDL_registerWriteCallback(I2C1_MultiByteWrite);
+	  LIS3MDL_init();
   */
 
   TIM2_RegisterCallback(TIM2_IRQ_main);
@@ -214,7 +214,7 @@ int main(void)
 	{
 		SystemMainCycleRoutine();
 		/* USER CODE END WHILE */
-		USART2_send_data(gyroMeanValues, 0, 0);
+
 		/* USER CODE BEGIN 3 */
 	}
   /* USER CODE END 3 */

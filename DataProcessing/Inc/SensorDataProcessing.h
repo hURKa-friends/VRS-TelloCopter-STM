@@ -12,8 +12,10 @@
 
 void calculate_angles(float currentAngles[], float acclData[]);
 
-float movingAvgFilter(float* array, uint8_t sampleCount, uint8_t max);
+float movingAvgFilter(float* array, uint8_t sampleCount);
 
 float linInterpolation(float input, float inputLimLow, float inputLimHigh, float outputLimLow, float outputLimHigh);
+
+float rad2deg(float rad);
 
 #endif /* INC_SENSORDATAPROCESSING_H_ */
