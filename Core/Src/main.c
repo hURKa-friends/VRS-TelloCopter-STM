@@ -38,11 +38,16 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define MAX_GYRO_BUFFER		8
-uint8_t gyroDataCounter = 0;
+uint8_t dataCounter = 0;
 float gyroX[MAX_GYRO_BUFFER];
 float gyroY[MAX_GYRO_BUFFER];
 float gyroZ[MAX_GYRO_BUFFER];
 float gyroMeanValues[3];
+
+float acclX[MAX_GYRO_BUFFER];
+float acclY[MAX_GYRO_BUFFER];
+float acclZ[MAX_GYRO_BUFFER];
+float acclMeanValues[3];
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -65,14 +70,14 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 /* TODO: KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
-float SimpleMean(float *gyroValue, uint8_t maximum)
+float SimpleMean(float *array, uint8_t maximum)
 {
-	float gyroSum = 0;
-	for(int i = 1; i < maximum; i++)
+	float sum = 0;
+	for(int i = 0; i < maximum; i++)
 	{
-		gyroSum += gyroValue[i];
+		sum += array[i];
 	}
-	float mean = gyroSum / maximum;
+	float mean = sum / maximum;
 	return mean;
 }
 /* KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
@@ -86,22 +91,35 @@ float SimpleMean(float *gyroValue, uint8_t maximum)
 void TIM2_IRQ_main(void)
 {
 	// TODO: Implement I2C Read logic
-	uint16_t rawGyroX, rawGyroY, rawGyroZ;
+	int16_t rawGyroX, rawGyroY, rawGyroZ;
 	LSM6DS0_get_gyro(&rawGyroX, &rawGyroY, &rawGyroZ);
-	gyroX[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroX);
-	gyroY[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroY);
-	gyroZ[gyroDataCounter] = LSM6DS0_parse_gyro_data(rawGyroZ);
+
+	int16_t rawAcclX, rawAcclY, rawAcclZ;
+	LSM6DS0_get_accl(&rawAcclX, &rawAcclY, &rawAcclZ);
+
+	gyroX[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroX);
+	gyroY[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroY);
+	gyroZ[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroZ);
+
+	acclX[dataCounter] = LSM6DS0_parse_accl_data(rawAcclX);
+	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
+	acclZ[dataCounter] = LSM6DS0_parse_accl_data(rawAcclZ);
 
 	/* TODO: KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
 	gyroMeanValues[0] = SimpleMean((float *)gyroX, MAX_GYRO_BUFFER);
 	gyroMeanValues[1] = SimpleMean((float *)gyroY, MAX_GYRO_BUFFER);
 	gyroMeanValues[2] = SimpleMean((float *)gyroZ, MAX_GYRO_BUFFER);
+
+	acclMeanValues[0] = SimpleMean((float *)acclX, MAX_GYRO_BUFFER);
+	acclMeanValues[1] = SimpleMean((float *)acclY, MAX_GYRO_BUFFER);
+	acclMeanValues[2] = SimpleMean((float *)acclZ, MAX_GYRO_BUFFER);
 	/* KOD MEDZI TYMITO KOMENTARMI NEPOUZIVAT NA SERIOZNE VECI */
 
-	gyroDataCounter++;
-	if(gyroDataCounter >= MAX_GYRO_BUFFER)
-		gyroDataCounter = 0;
+	dataCounter++;
+	if(dataCounter >= MAX_GYRO_BUFFER)
+		dataCounter = 0;
 }
+
 
 /**
   * @brief   Main interrupt handler for TIM3.
@@ -173,9 +191,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   for (int i = 0; i < MAX_GYRO_BUFFER; i++)
   {
-	gyroX[gyroDataCounter] = 0;
-	gyroY[gyroDataCounter] = 0;
-	gyroZ[gyroDataCounter] = 0;
+	gyroX[dataCounter] = 0;
+	gyroY[dataCounter] = 0;
+	gyroZ[dataCounter] = 0;
   }
 
   LSM6DS0_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);

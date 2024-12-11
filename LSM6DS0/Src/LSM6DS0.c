@@ -122,61 +122,6 @@ void LSM6DS0_init(void *readCallback, void *writeCallback)
   */
 void LSM6DS0_init_registers()
 {
-	uint8_t CTRL_REG_DEVICE[NUMBER_OF_CTRL_REG];  	// CTRL_REG8 0x22 -> CTRL_REG10 0x24
-	uint8_t CTRL_REG_GYRO[NUMBER_OF_CTRL_REG];		// CTRL_REG1 0x10 -> CTRL_REG3 0x12
-	uint8_t CTRL_REG_ACCL[NUMBER_OF_CTRL_REG];  	// CTRL_REG5 0x1F -> CTRL_REG7 0x21
-
-	// SET SCALER FOR GYROSCOPE BASED ON SELECTED MEASURE RANGE
-	uint8_t gyro_full_scale = LSM6DS0_read_byte(LSM6DS0_CTRL_REG1_G_ADDRESS);
-
-	gyro_full_scale >>= 3;
-	gyro_full_scale &= ~(11100);
-
-	switch(gyro_full_scale) {
-	case GYRO_FS_LOW:
-		gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_LOW;
-
-		break;
-	case GYRO_FS_MID:
-		gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_MID;
-
-		break;
-	case GYRO_FS_HIGH:
-		gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_HIGH;
-
-		break;
-	default:
-		// N/A ?
-		break;
-	}
-
-	// SET SCALER FOR ACCELEROMETER BASED ON SELECTED MEASURE RANGE
-	uint8_t accl_full_scale = LSM6DS0_read_byte(LSM6DS0_CTRL_REG6_XL_ADDRESS);
-
-	accl_full_scale >>= 3;
-	accl_full_scale &= ~(11100);
-
-	switch(accl_full_scale) {
-	case ACCL_FS_LOW:
-		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_LOW;
-
-		break;
-	case ACCL_FS_MID_LOW:
-		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_MID_LOW;
-
-		break;
-	case ACCL_FS_MID_HIGH:
-		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_MID_HIGH;
-
-		break;
-	case ACCL_FS_HIGH:
-		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_HIGH;
-
-		break;
-	default:
-		break;
-	}
-
 	/**
 	  ******************************************************************************
 	  * TODO: LSM6DS0 CTRL_REG initialization such as:
@@ -187,21 +132,58 @@ void LSM6DS0_init_registers()
 	  ******************************************************************************
 	  */
 
-	CTRL_REG_DEVICE[0] = 0b01000000; // Set CTRL_REG8  0x22 = 0b0100 0000 (Block Data Update)
-	CTRL_REG_DEVICE[1] = 0b00000000; // Set CTRL_REG9  0x23 = 0b0000 0000 (Default)
-	CTRL_REG_DEVICE[2] = 0b00000000; // Set CTRL_REG10 0x24 = 0b0000 0000 (Default)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG1_G_ADDRESS,  0x80U); // CTRL_REG1  = 0b1000 0000 (ODR 238Hz, Cutoff 14Hz, 245dsp)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG2_G_ADDRESS,  0x00U); // CTRL_REG2  = 0b0000 0000 (Default)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG3_G_ADDRESS,  0x00U); // CTRL_REG3  = 0b0000 0000 (Default - HP filter off)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG4_ADDRESS,    0x38U); // CTRL_REG4  = 0b0011 1000 (XYZ Gyro output Enable)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG5_XL_ADDRESS, 0x38U); // CTRL_REG5  = 0b0011 1000 (XYZ Accl output Enable)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG6_XL_ADDRESS, 0x80U); // CTRL_REG6  = 0b1000 0000 (ODR 238Hz, Default)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG7_XL_ADDRESS, 0x00U); // CTRL_REG7  = 0b0000 0000 (Default)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG8_ADDRESS,    0x04U); // CTRL_REG8  = 0b0000 0100 (REG_ADDR automatic increment)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG9_ADDRESS,    0x00U); // CTRL_REG9  = 0b0000 0000 (Default)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG10_ADDRESS,   0x00U); // CTRL_REG10 = 0b0000 0000 (Default)
 
-	CTRL_REG_GYRO[0] = 0b10000000;	 // Set CTRL_REG1G 0x10 = 0b1000 0010 (ODR 238Hz, Cutoff 14Hz, 245dsp)
-	CTRL_REG_GYRO[1] = 0b00000000;	 // Set CTRL_REG2G 0x11 = 0b0000 0000 (Default)
-	CTRL_REG_GYRO[2] = 0b00000000;	 // Set CTRL_REG3G 0x12 = 0b0000 0000 (Default)
+	LL_mDelay(1);
 
-	CTRL_REG_ACCL[0] = 0b01111000;	 // Set CTRL_REG5A 0x1F = 0b0111 1000 (Update per 2 samples, XYZ enable, )
-	CTRL_REG_ACCL[1] = 0b10000000;	 // Set CTRL_REG6A 0x20 = 0b1001 1000 (ODR 238Hz, Range +-8G, Anti-alias 408Hz)
-	CTRL_REG_ACCL[2] = 0b00000000;	 // Set CTRL_REG7A 0x21 = 0b0000 0000 (Default)
+	/*
+	 * Initialization of GYROSCOPE SCALER VALUE BASED ON SELECTED MEASURE RANGE
+	 */
+	uint8_t rawGyroScale = LSM6DS0_read_byte(LSM6DS0_CTRL_REG1_G_ADDRESS);
+	rawGyroScale = rawGyroScale & 0x18U;
+	rawGyroScale = rawGyroScale >> 3;
 
-	LSM6DS0_write_bytes(LSM6DS0_CTRL_REG8_ADDRESS, CTRL_REG_DEVICE, NUMBER_OF_CTRL_REG);
-	LSM6DS0_write_bytes(LSM6DS0_CTRL_REG1_G_ADDRESS, CTRL_REG_GYRO, NUMBER_OF_CTRL_REG);
-	LSM6DS0_write_bytes(LSM6DS0_CTRL_REG5_XL_ADDRESS, CTRL_REG_ACCL, NUMBER_OF_CTRL_REG);
+	switch(rawGyroScale)
+	{
+		case GYRO_FS_LOW:
+			gyro_scaler = GYRO_FS_VALUE_LOW; break;
+		case GYRO_FS_MID:
+			gyro_scaler = GYRO_FS_VALUE_MID; break;
+		case GYRO_FS_HIGH:
+			gyro_scaler = GYRO_FS_VALUE_HIGH; break;
+		default:
+			deviceState = INIT_ERROR; break; // Undefined behaviour
+	}
+
+	/*
+	 * Initialization of ACCELEROMETER SCALER VALUE BASED ON SELECTED MEASURE RANGE
+	 */
+	uint8_t rawAcclScale = LSM6DS0_read_byte(LSM6DS0_CTRL_REG6_XL_ADDRESS);
+	rawAcclScale = rawAcclScale & 0x18U;
+	rawAcclScale = rawAcclScale >> 3;
+
+	switch(rawAcclScale)
+	{
+		case ACCL_FS_LOW:
+			accl_scaler = ACCL_FS_VALUE_LOW; break;
+		case ACCL_FS_MID_LOW:
+			accl_scaler = ACCL_FS_VALUE_MID_LOW; break;
+		case ACCL_FS_MID_HIGH:
+			accl_scaler = ACCL_FS_VALUE_MID_HIGH; break;
+		case ACCL_FS_HIGH:
+			accl_scaler = ACCL_FS_VALUE_HIGH; break;
+		default:
+			deviceState = INIT_ERROR; break; // Undefined behaviour
+	}
 }
 
 /**
@@ -221,17 +203,17 @@ uint8_t LSM6DS0_get_device_state(void)
   * @param  rawAcclZ: Pointer to store the raw Z-axis accelerometer data.
   * @retval None
   */
-void LSM6DS0_get_accl(uint16_t *rawAcclX, uint16_t *rawAcclY, uint16_t *rawAcclZ)
+void LSM6DS0_get_accl(int16_t *rawAcclX, int16_t *rawAcclY, int16_t *rawAcclZ)
 {
 	uint8_t rawAcclOut[ACCL_REG_COUNT];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
+	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_XL_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
 
-	*rawAcclX = (uint16_t)(((uint16_t)(rawAcclOut[0]) << 0) |
-	 	 	   	   	   	   ((uint16_t)(rawAcclOut[1]) << 8));
-	*rawAcclY = (uint16_t)(((uint16_t)(rawAcclOut[2]) << 0) |
-	 	 	   	   	   	   ((uint16_t)(rawAcclOut[3]) << 8));
-	*rawAcclZ = (uint16_t)(((uint16_t)(rawAcclOut[4]) << 0) |
-	 	 	   	   	   	   ((uint16_t)(rawAcclOut[5]) << 8));
+	*rawAcclX = (int16_t)(((uint16_t)(rawAcclOut[0]) << 0) |
+	 	 	   	   	   	  ((uint16_t)(rawAcclOut[1]) << 8));
+	*rawAcclY = (int16_t)(((uint16_t)(rawAcclOut[2]) << 0) |
+	 	 	   	   	   	  ((uint16_t)(rawAcclOut[3]) << 8));
+	*rawAcclZ = (int16_t)(((uint16_t)(rawAcclOut[4]) << 0) |
+	 	 	   	   	   	  ((uint16_t)(rawAcclOut[5]) << 8));
 }
 
 /**
@@ -241,25 +223,28 @@ void LSM6DS0_get_accl(uint16_t *rawAcclX, uint16_t *rawAcclY, uint16_t *rawAcclZ
   * @param  rawGyroZ: Pointer to store the raw Z-axis gyroscope data.
   * @retval None
   */
-void LSM6DS0_get_gyro(uint16_t *rawGyroX, uint16_t *rawGyroY, uint16_t *rawGyroZ)
+void LSM6DS0_get_gyro(int16_t *rawGyroX, int16_t *rawGyroY, int16_t *rawGyroZ)
 {
 	uint8_t rawGyroOut[GYRO_REG_COUNT];
 	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, rawGyroOut, sizeof(rawGyroOut));
 
-	*rawGyroX = (uint16_t)(((uint16_t)(rawGyroOut[0]) << 0) |
-	 	 	   	   	   	   ((uint16_t)(rawGyroOut[1]) << 8));
-	*rawGyroY = (uint16_t)(((uint16_t)(rawGyroOut[2]) << 0) |
-	 	 	   	   	   	   ((uint16_t)(rawGyroOut[3]) << 8));
-	*rawGyroZ = (uint16_t)(((uint16_t)(rawGyroOut[4]) << 0) |
-	 	 	   	   	   	   ((uint16_t)(rawGyroOut[5]) << 8));
+	*rawGyroX = (int16_t)(((uint16_t)(rawGyroOut[0]) << 0) |
+	 	 	   	   	   	  ((uint16_t)(rawGyroOut[1]) << 8));
+	*rawGyroY = (int16_t)(((uint16_t)(rawGyroOut[2]) << 0) |
+	 	 	   	   	   	  ((uint16_t)(rawGyroOut[3]) << 8));
+	*rawGyroZ = (int16_t)(((uint16_t)(rawGyroOut[4]) << 0) |
+	 	 	   	   	   	  ((uint16_t)(rawGyroOut[5]) << 8));
 }
 
 /**
-  * @brief TODO: Implement accl data parsing
+  * @brief  Converts raw accelerometer data to a scaled value in g.
+  * @param  rawAccl: The raw accelerometer data (16-bit value) read from the sensor.
+  * @retval The accelerometer value scaled to g as a floating-point value.
   */
-float LSM6DS0_parse_accl_data(uint16_t rawAccl)
+float LSM6DS0_parse_accl_data(int16_t rawAccl)
 {
-	float acclValue = ((float)rawAccl) * accl_scaler;
+	float toG = 1000.0;	// conversion to g
+	float acclValue = (((float)rawAccl) * accl_scaler) / toG;
 	return acclValue;
 }
 
@@ -268,7 +253,7 @@ float LSM6DS0_parse_accl_data(uint16_t rawAccl)
   * @param  rawGyro: The raw gyroscope data (16-bit value) read from the sensor.
   * @retval The gyroscope value scaled to degrees per second as a floating-point value.
   */
-float LSM6DS0_parse_gyro_data(uint16_t rawGyro)
+float LSM6DS0_parse_gyro_data(int16_t rawGyro)
 {
 	float toDegrees = 1000.0;	// conversion to degrees
 	float gyroValue = ((((float)rawGyro) * gyro_scaler) / toDegrees);
