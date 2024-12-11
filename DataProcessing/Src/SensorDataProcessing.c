@@ -6,61 +6,43 @@
  */
 
 #include "SensorDataProcessing.h"
+#include <math.h>
 
-float calculate_angle(float current_angle, float angular_velocity, float dt)
+void calculate_angles(float currentAngles[], float acclData[])
 {
-    current_angle += angular_velocity * dt;
-    return current_angle;
+    currentAngles[0] =  atan(acclData[0]/sqrt((acclData[1]*acclData[1])+(acclData[2]*acclData[2])));
+    currentAngles[1] =  atan(acclData[1]/sqrt((acclData[0]*acclData[0])+(acclData[2]*acclData[2])));
+    currentAngles[2] =  atan(sqrt((acclData[0]*acclData[0])+(acclData[1]*acclData[1]))/acclData[2]);
 }
 
-float update_angle(float current_angle)
-{
-    static uint32_t prev_time = 0;
-
-    // Read the angular velocity
-    /* TODO: NEPOUZIVAT VOLANIE FUNKCII POUZI ARGUMENT
-     * float angular_velocity_x = LSM6DS0_readXGyroRegister(0.0);
-     */
-
-    // Get the current time in milliseconds
-    uint32_t curr_time = LL_usGetTick();
-
-    // Calculate the time difference in seconds
-    float dt = (curr_time - prev_time) / 1000.0f;  // Convert ms to seconds
-
-    float angle_x;
-
-    if (dt > 0)  // Ensure no division by zero
-    {
-        /* TODO: NEPOUZIVAT VOLANIE FUNKCII POUZI ARGUMENT
-         * angle_x = calculate_angle(current_angle, angular_velocity_x, dt);
-         */
-    }
-
-    // Update the previous time
-    prev_time = curr_time;
-    return angle_x;
+float movingAvgFilter(float* array, uint8_t sampleCount, uint8_t max) {
+	float valueSum = 0;
+	for(int i = 0; i < max; i++)
+	{
+		valueSum += array[i];
+	}
+	float mean = valueSum / max;
+	return mean;
 }
 
-void formatAndSaveToCSV(float current_angle, float y, float z)
-{
-    // Buffers to hold formatted strings
-    char forx[6];
-    char fory[6];
-    char forz[6];
+float linInterpolation(float input, float inputLimLow, float inputLimHigh, float outputLimLow, float outputLimHigh) {
 
-    // Clear tx_data2 buffer
-    //memset(tx_data2, '\0', sizeof(tx_data2));
+	float velocity;
+	float sign;
 
-    // Format each value with the specified precision
-    snprintf(forx, sizeof(forx), "%.2f", current_angle);
-    snprintf(fory, sizeof(fory), "%.2f", y);
-    snprintf(forz, sizeof(forz), "%.2f", z);
+	if(input > 0) {
+		sign = 1;
+	} else {
+		sign = -1;
+	}
 
-    // Combine formatted values into tx_data2
-    //snprintf((char *)tx_data2, sizeof(tx_data2), "%s,%s,%s\r", forx, fory, forz);
+	if (input < inputLimLow) {
+		input = inputLimLow;
+	}
+	if (input > inputLimHigh) {
+		input = inputLimHigh;
+	}
 
-    // Send tx_data2 buffer via USART2
-    // TODO: Implement USART
-    // USART2_PutBuffer(tx_data2, strlen((char *)tx_data2)); // Use strlen for accurate size
+	velocity = outputLimLow + ((input - inputLimLow) / (inputLimHigh - inputLimLow)) * (outputLimHigh - outputLimLow);
+	return velocity * sign;
 }

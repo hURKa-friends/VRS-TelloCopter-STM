@@ -10,8 +10,10 @@
 
 #include "main.h"
 
-float calculate_angle(float current_angle, float angular_velocity, float dt);
-float update_angle(float current_angle);
-void formatAndSaveToCSV(float current_angle, float y, float z);
+void calculate_angles(float currentAngles[], float acclData[]);
+
+float movingAvgFilter(float* array, uint8_t sampleCount, uint8_t max);
+
+float linInterpolation(float input, float inputLimLow, float inputLimHigh, float outputLimLow, float outputLimHigh);
 
 #endif /* INC_SENSORDATAPROCESSING_H_ */

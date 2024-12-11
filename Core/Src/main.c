@@ -196,7 +196,7 @@ int main(void)
 	{
 		SystemMainCycleRoutine();
 		/* USER CODE END WHILE */
-
+		USART2_send_data(gyroMeanValues, 0, 0);
 		/* USER CODE BEGIN 3 */
 	}
   /* USER CODE END 3 */

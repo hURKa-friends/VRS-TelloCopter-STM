@@ -167,6 +167,9 @@ void USART2_send_data(float gyro[], float accl[], float mag[]) {
 	if (mag != 0) {
 		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2], mag[0], mag[1], mag[2]);
 	}
+	else if (mag == 0 && accl == 0) {
+		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2]);
+	}
 	else {
 		sprintf(msg2, "%.4f,%.4f,%.4f,%.4f,%.4f,%.4f\n\r", gyro[0], gyro[1], gyro[2], accl[0], accl[1], accl[2]);
 	}
