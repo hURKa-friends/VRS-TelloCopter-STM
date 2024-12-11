@@ -8,7 +8,7 @@
 #include "LSM6DS0.h"
 
 // Global variables
-LSM6DS0_state deviceState = DISCONNECTED;
+LSM6DS0_state LSM6DS0_deviceState = LSM6DS0_DISCONNECTED;
 float gyro_scaler, accl_scaler;
 
 /**
@@ -43,7 +43,7 @@ uint8_t LSM6DS0_read_byte(uint8_t register_address)
 	uint8_t i2cState = 0, byte = 0;
 	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 	return byte;
 }
 
@@ -59,7 +59,7 @@ void LSM6DS0_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_o
 	uint8_t i2cState = 0;
 	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
 
 /**
@@ -73,7 +73,7 @@ void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte)
 	uint8_t i2cState = 0;
 	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
 
 /**
@@ -88,11 +88,13 @@ void LSM6DS0_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_
 	uint8_t i2cState = 0;
 	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
 
 /**
   * @brief  Function for initializing the sensor LSM6DS0.
+  * @param  readCallback: callback function for I2C reading.
+  * @param  writeCallback: callback function for I2C writing.
   * @retval None.
   */
 void LSM6DS0_init(void *readCallback, void *writeCallback)
@@ -106,14 +108,14 @@ void LSM6DS0_init(void *readCallback, void *writeCallback)
 
 	// Check if correct device is connected
 	if(LSM6DS0_read_byte(LSM6DS0_WHO_AM_I_ADDRESS) == LSM6DS0_WHO_AM_I_VALUE)
-		deviceState = CONNECTED;
+		LSM6DS0_deviceState = LSM6DS0_CONNECTED;
 
-	if (deviceState != CONNECTED)
+	if (LSM6DS0_deviceState != LSM6DS0_CONNECTED)
 		return; // LSM6DS0 Init failed.
 
 	LSM6DS0_init_registers();
-	deviceState = INITIALIZED;
-	return;  // LSM6DS0 Init succes.
+	LSM6DS0_deviceState = LSM6DS0_INITIALIZED;
+	return;  // LSM6DS0 Init success.
 }
 
 /**
@@ -161,7 +163,7 @@ void LSM6DS0_init_registers()
 		case GYRO_FS_HIGH:
 			gyro_scaler = GYRO_FS_VALUE_HIGH; break;
 		default:
-			deviceState = INIT_ERROR; break; // Undefined behaviour
+			LSM6DS0_deviceState = LSM6DS0_INIT_ERROR; break; // Undefined behaviour
 	}
 
 	/*
@@ -182,7 +184,7 @@ void LSM6DS0_init_registers()
 		case ACCL_FS_HIGH:
 			accl_scaler = ACCL_FS_VALUE_HIGH; break;
 		default:
-			deviceState = INIT_ERROR; break; // Undefined behaviour
+			LSM6DS0_deviceState = LSM6DS0_INIT_ERROR; break; // Undefined behaviour
 	}
 }
 
@@ -193,7 +195,7 @@ void LSM6DS0_init_registers()
   */
 uint8_t LSM6DS0_get_device_state(void)
 {
-	return deviceState;
+	return LSM6DS0_deviceState;
 }
 
 /**

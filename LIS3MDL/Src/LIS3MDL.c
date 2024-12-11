@@ -6,14 +6,12 @@
   */
 
 #include "LIS3MDL.h"
-#include "usart.h"
 
 // Global variables
-//uint8_t LIS3MDL_DEVICE_ADDRESS;
-
 int16_t X_offset;
 int16_t Y_offset;
 int16_t Z_offset;
+LIS3MDL_state LIS3MDL_deviceState = LIS3MDL_DISCONNECTED;
 float mag_scaler;
 
 /**
@@ -25,20 +23,7 @@ float mag_scaler;
   * @param  num_of_bytes: number of bytes to read.
   * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
   */
-static uint8_t (* LIS3MDL_read)(uint8_t slave_address, uint8_t register_address,uint8_t bytes[], uint8_t num_of_bytes) = 0;
-
-/**
-  * @brief  Function for registering reading callback function.
-  * @param  callback: function to be registered as callback function.
-  * @retval None.
-  */
-void LIS3MDL_registerReadCallback(void *callback)
-{
-	if(callback != 0)
-	{
-		LIS3MDL_read = callback;
-	}
-}
+static uint8_t (* I2C_ReadData)(uint8_t slave_address, uint8_t register_address,uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
 /**
   * @brief  Pointer to a function that writes data to an I2C slave device.
@@ -49,20 +34,7 @@ void LIS3MDL_registerReadCallback(void *callback)
   * @param  num_of_bytes: number of bytes to write.
   * @retval 0 on success (ACK received), or 1 if an error occurs (NACK received).
   */
-static uint8_t (* LIS3MDL_write)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
-
-/**
-  * @brief  Function for registering writing callback function.
-  * @param  callback: function to be registered as callback function.
-  * @retval None.
-  */
-void LIS3MDL_registerWriteCallback(void *callback)
-{
-	if(callback != 0)
-	{
-		LIS3MDL_write = callback;
-	}
-}
+static uint8_t (* I2C_WriteData)(uint8_t slave_address, uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes) = 0;
 
 /**
   * @brief  Reads a single byte from the specified register on the LIS3MDL sensor.
@@ -71,8 +43,10 @@ void LIS3MDL_registerWriteCallback(void *callback)
   */
 uint8_t LIS3MDL_read_byte(uint8_t register_address)
 {
-	uint8_t byte;
-	LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS, register_address, &byte, 1);
+	uint8_t i2cState = 0, byte = 0;
+	i2cState = I2C_ReadData(LIS3MDL_DEVICE_ADDRESS, register_address, &byte, 1);
+	if(i2cState != 0)
+		LIS3MDL_deviceState = LIS3MDL_I2C_ERROR;
 	return byte;
 }
 
@@ -85,7 +59,10 @@ uint8_t LIS3MDL_read_byte(uint8_t register_address)
   */
 void LIS3MDL_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
 {
-	LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	uint8_t i2cState = 0;
+	i2cState = I2C_ReadData(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	if(i2cState != 0)
+		LIS3MDL_deviceState = LIS3MDL_I2C_ERROR;
 }
 
 /**
@@ -96,7 +73,10 @@ void LIS3MDL_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_o
   */
 void LIS3MDL_write_byte(uint8_t register_address, uint8_t byte)
 {
-	LIS3MDL_write(LIS3MDL_DEVICE_ADDRESS, register_address, &byte, 1);
+	uint8_t i2cState = 0;
+	i2cState = I2C_WriteData(LIS3MDL_DEVICE_ADDRESS, register_address, &byte, 1);
+	if(i2cState != 0)
+		LIS3MDL_deviceState = LIS3MDL_I2C_ERROR;
 }
 
 /**
@@ -108,39 +88,38 @@ void LIS3MDL_write_byte(uint8_t register_address, uint8_t byte)
   */
 void LIS3MDL_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
 {
-	LIS3MDL_write(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	uint8_t i2cState = 0;
+	i2cState = I2C_WriteData(LIS3MDL_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	if(i2cState != 0)
+		LIS3MDL_deviceState = LIS3MDL_I2C_ERROR;
 }
 
 /**
   * @brief  Function for initializing the sensor LIS3MDL.
+  * @param  readCallback: callback function for I2C reading.
+  * @param  writeCallback: callback function for I2C writing.
   * @retval None.
   */
-void LIS3MDL_init()
+void LIS3MDL_init(void *readCallback, void *writeCallback)
 {
-	uint8_t who_am_i_value;
+	// Register Generic Read Callback
+	if(readCallback != 0)
+		I2C_ReadData = readCallback;
+	// Register Generic Write Callback
+	if(writeCallback != 0)
+		I2C_WriteData = writeCallback;
 
-	/*if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_H, LIS3MDL_WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
-		LIS3MDL_DEVICE_ADDRESS = LIS3MDL_DEVICE_ADDRESS_H;
-	}
-	else if (!LIS3MDL_read(LIS3MDL_DEVICE_ADDRESS_L, LIS3MDL_WHO_AM_I_ADDRESS, &who_am_i_value, 1)) {
-		LIS3MDL_DEVICE_ADDRESS = LIS3MDL_DEVICE_ADDRESS_L;
-	}
-	else
-	{
-		//USART_write("LIS3MDL Init failed.");/////////////////
-		return;
-	}*/
+	// Check if correct device is connected
+	if(LIS3MDL_read_byte(LIS3MDL_WHO_AM_I_ADDRESS) == LIS3MDL_WHO_AM_I_VALUE)
+		LIS3MDL_deviceState = LIS3MDL_CONNECTED;
 
-	if (who_am_i_value != LIS3MDL_WHO_AM_I_VALUE)
-	{
-		//USART_write("LIS3MDL Init failed.");/////////////////
-		return;
-	}
+	if (LIS3MDL_deviceState != LIS3MDL_CONNECTED)
+		return; // LIS3MDL Init failed.
 
-	LIS3MDL_set_registers();
+	LIS3MDL_init_registers();
 	LIS3MDL_read_offsets();
-
-	//USART_write("LIS3MDL Init successful.");/////////////////
+	LIS3MDL_deviceState = LIS3MDL_INITIALIZED;
+	return; // LIS3MDL Init success
 }
 
 
@@ -148,11 +127,19 @@ void LIS3MDL_init()
   * @brief  Function for setting control registers of the sensor LIS3MDL.
   * @retval None.
   */
-void LIS3MDL_set_registers()
+void LIS3MDL_init_registers()
 {
-	uint8_t CTRL_REG_DEVICE[LIS3MDL_NUMBER_OF_CTRL_REG];
+	LIS3MDL_write_byte(LIS3MDL_CTRL_REG1_ADDRESS,  0x5EU); // CTRL_REG1  = 0b0101 1110 (ODR 300, FAST_ODR enabled, High performance)
+	LIS3MDL_write_byte(LIS3MDL_CTRL_REG2_ADDRESS,  0x60U); // CTRL_REG2  = 0b0110 0000 (16 gauss)
+	LIS3MDL_write_byte(LIS3MDL_CTRL_REG3_ADDRESS,  0x0U); // CTRL_REG3  = 0b0000 0000 (Continuous mode)
+	LIS3MDL_write_byte(LIS3MDL_CTRL_REG4_ADDRESS, 0x8U); // CTRL_REG4  = 0b0000 1000 (High performance)
+	LIS3MDL_write_byte(LIS3MDL_CTRL_REG5_ADDRESS, 0x0U); // CTRL_REG5  = 0b0000 0000 (Default)
 
-	// SET SCALER FOR MAGNETIC SENSOR BASED ON SELECTED MEASURE RANGE
+	LL_mDelay(1);
+
+	/*
+	 * Initialization of GYROSCOPE SCALER VALUE BASED ON SELECTED MEASURE RANGE
+	 */
 	uint8_t mag_full_scale = LIS3MDL_read_byte(LIS3MDL_CTRL_REG2_ADDRESS);
 
 	mag_full_scale >>= 5;
@@ -160,37 +147,34 @@ void LIS3MDL_set_registers()
 
 	switch(mag_full_scale) {
 	case MAG_FS_LOW:
-		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_LOW;
+		mag_scaler = MAG_FS_VALUE_LOW;
 
 		break;
 	case MAG_FS_MID_LOW:
-		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_MID_LOW;
+		mag_scaler = MAG_FS_VALUE_MID_LOW;
 
 		break;
 	case MAG_FS_MID_HIGH:
-		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_MID_HIGH;
+		mag_scaler = MAG_FS_VALUE_MID_HIGH;
 
 		break;
 	case MAG_FS_HIGH:
-		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_HIGH;
+		mag_scaler = MAG_FS_VALUE_HIGH;
 
 		break;
 	default:
 		break;
 	}
+}
 
-	/*
-	 * TODO
-	 * full-scale selection
-	 */
-
-	CTRL_REG_DEVICE[0] = 0b01011110;
-	CTRL_REG_DEVICE[0] = 0b00100000;
-	CTRL_REG_DEVICE[0] = 0b00000000;
-	CTRL_REG_DEVICE[0] = 0b00001000;
-	CTRL_REG_DEVICE[0] = 0b00000000;
-
-	LIS3MDL_write_bytes(LIS3MDL_CTRL_REG1_ADDRESS, CTRL_REG_DEVICE, LIS3MDL_NUMBER_OF_CTRL_REG);
+/**
+  * @brief  Retrieves the current state of the LSM6DS0 device.
+  * @retval The current state of the device as a value of type `LSM6DS0_state`.
+  * @note   The state indicates whether the device is connected, initialized, or has encountered an I2C error.
+  */
+uint8_t LIS3MDL_get_device_state(void)
+{
+	return LIS3MDL_deviceState;
 }
 
 /**
@@ -200,81 +184,45 @@ void LIS3MDL_set_registers()
   */
 void LIS3MDL_read_offsets()
 {
-	uint8_t LIS3MDL_OFFSET_REG_X[2];
-	uint8_t LIS3MDL_OFFSET_REG_Y[2];
-	uint8_t LIS3MDL_OFFSET_REG_Z[2];
+	uint8_t LIS3MDL_offsets[LIS3MDL_NUMBER_OF_OFFSET_REG];
 
-	LIS3MDL_read_bytes(LIS3MDL_OFFSET_X_REG_L_M_ADDRESS, LIS3MDL_OFFSET_REG_X, LIS3MDL_NUMBER_OF_OFFSET_REG);
-	LIS3MDL_read_bytes(LIS3MDL_OFFSET_Y_REG_L_M_ADDRESS, LIS3MDL_OFFSET_REG_Y, LIS3MDL_NUMBER_OF_OFFSET_REG);
-	LIS3MDL_read_bytes(LIS3MDL_OFFSET_Z_REG_L_M_ADDRESS, LIS3MDL_OFFSET_REG_Z, LIS3MDL_NUMBER_OF_OFFSET_REG);
+	LIS3MDL_read_bytes(LIS3MDL_OFFSET_X_REG_L_M_ADDRESS, LIS3MDL_offsets, sizeof(LIS3MDL_offsets));
 
-	X_offset = LIS3MDL_OFFSET_REG_X[1] << 8;
-	X_offset |= LIS3MDL_OFFSET_REG_X[0];
-	Y_offset = LIS3MDL_OFFSET_REG_Y[1] << 8;
-	Y_offset |= LIS3MDL_OFFSET_REG_Y[0];
-	Z_offset = LIS3MDL_OFFSET_REG_Z[1] << 8;
-	Z_offset |= LIS3MDL_OFFSET_REG_Z[0];
+	X_offset = (int16_t)(((uint16_t)(LIS3MDL_offsets[0]) << 0) |
+						  ((uint16_t)(LIS3MDL_offsets[1]) << 8));
+	Y_offset = (int16_t)(((uint16_t)(LIS3MDL_offsets[2]) << 0) |
+						  ((uint16_t)(LIS3MDL_offsets[3]) << 8));
+	Z_offset = (int16_t)(((uint16_t)(LIS3MDL_offsets[4]) << 0) |
+						  ((uint16_t)(LIS3MDL_offsets[5]) << 8));
 }
 
 /**
-  * @brief  Function for receiving data from magnetic sensor of the LIS3MDL.
-  * @param	mag_bytes: array where data will be written.
-  * 		[0]: value in X axis
-  * 		[1]: value in Y axis
-  * 		[2]: value in Z axis
-  * @retval None.
+  * @brief  Reads raw accelerometer data from the LIS3MDL sensor.
+  * @param  rawAcclX: Pointer to store the raw X-axis magnetic sensor data.
+  * @param  rawAcclY: Pointer to store the raw Y-axis magnetic sensor data.
+  * @param  rawAcclZ: Pointer to store the raw Z-axis magnetic sensor data.
+  * @retval None
   */
-void LIS3MDL_get_mag_bytes(float mag_bytes[])
+void LIS3MDL_get_mag(int16_t *rawMagX, int16_t *rawMagY, int16_t *rawMagZ)
 {
-	uint8_t OUT_X[LIS3MDL_NUMBER_OF_OUT_REG];
-	uint8_t OUT_Y[LIS3MDL_NUMBER_OF_OUT_REG];
-	uint8_t OUT_Z[LIS3MDL_NUMBER_OF_OUT_REG];
+	uint8_t rawMagOut[LIS3MDL_NUMBER_OF_OUT_REG];
+	LIS3MDL_read_bytes(LIS3MDL_OUT_X_L_ADDRESS, rawMagOut, sizeof(rawMagOut));
 
-	/*int16_t X_value;
-	int16_t Y_value;
-	int16_t Z_value;*/
-
-	LIS3MDL_read_bytes(LIS3MDL_OUT_X_L_ADDRESS, OUT_X, LIS3MDL_NUMBER_OF_OUT_REG);
-	LIS3MDL_read_bytes(LIS3MDL_OUT_Y_L_ADDRESS, OUT_Y, LIS3MDL_NUMBER_OF_OUT_REG);
-	LIS3MDL_read_bytes(LIS3MDL_OUT_Z_L_ADDRESS, OUT_Z, LIS3MDL_NUMBER_OF_OUT_REG);
-
-	/*uint8_t sign_X = (OUT_X[1] >> 7) & 1;
-	uint8_t sign_Y = (OUT_Y[1] >> 7) & 1;
-	uint8_t sign_Z = (OUT_Z[1] >> 7) & 1;
-
-
-
-	X_value = OUT_X[1] << 8;
-	X_value |= OUT_X[0];
-	Y_value = OUT_Y[1] << 8;
-	Y_value |= OUT_Y[0];
-	Z_value = OUT_Z[1] << 8;
-	Z_value |= OUT_Z[0];*/
-
-	mag_bytes[0] = LIS3MDL_OUT_to_float(OUT_X[1], OUT_X[0]);//X_value + X_offset;
-	mag_bytes[1] = LIS3MDL_OUT_to_float(OUT_Y[1], OUT_Y[0]);//Y_value + Y_offset;
-	mag_bytes[2] = LIS3MDL_OUT_to_float(OUT_Z[1], OUT_Z[0]);//Z_value + Z_offset;
+	*rawMagX = (int16_t)(((uint16_t)(rawMagOut[0]) << 0) |
+						  ((uint16_t)(rawMagOut[1]) << 8)) - X_offset;
+	*rawMagY = (int16_t)(((uint16_t)(rawMagOut[2]) << 0) |
+						  ((uint16_t)(rawMagOut[3]) << 8)) - Y_offset;
+	*rawMagZ = (int16_t)(((uint16_t)(rawMagOut[4]) << 0) |
+						  ((uint16_t)(rawMagOut[5]) << 8)) - Z_offset;
 }
 
 /**
-  * @brief  Converts two registers to 2's complement floating-point value.
-  * @param	MSB: most significant byte of the two registers.
-  * @param  LSB: least significant byte of the two registers.
-  * @retval Value of the two registers as float.
+  * @brief  Converts raw magnetic sensor data to a scaled value in gauss.
+  * @param  rawMag: The raw magnetic sensor data (16-bit value) read from the sensor.
+  * @retval The magnetic sensor value scaled to gauss as a floating-point value.
   */
-float LIS3MDL_OUT_to_float(uint8_t MSB, uint8_t LSB)
+float LIS3MDL_parse_mag_data(int16_t rawMag)
 {
-	// TODO: Vracia mi chyby ? Neviem skompilovat ??
-	/* float value;
-	 * uint8_t sign = (MSB >> 7) & 1;
-	 *
-	 * value = sign << (FLOAT_SIZE_IN_BITS - 1);
-	 * value |= MSB << 8;
-	 * value &= ~(1 << 16);
-	 * value |= LSB;
-	 *
-	 */
-
-	return 0.0;
+	float magValue = ((float)rawMag) / mag_scaler;
+	return magValue;
 }
-
