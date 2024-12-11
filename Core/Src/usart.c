@@ -133,14 +133,14 @@ void USART2_PutBuffer(uint8_t *buffer, uint8_t length)
 
 /**
   * @brief  Send sensor data to USART2 in CSV format.
-  * @param  c_val: Filtered data from gyroscope stored in an array.
-  * @param  roll_vel: Filtered data from gyroscope stored in an array.
-  * @param  pitch_vel: Filtered data from accelerometer stored in an array.
-  * @param  yaw_vel: Filtered data from magnetic sensor stored in an array.
+  * @param  c_val: Command as array of characters.
+  * @param  roll_val: Control value of roll.
+  * @param  pitch_val: Control value of pitch.
+  * @param  yaw_val: Control value of yaw.
   * @retval None.
   */
-void USART2_send_data(char c_val[], float roll_vel, float pitch_vel, float yaw_vel) {
-	sprintf(msg2, "%s,%.4f,%.4f,%.4f\n\r",c_val, roll_vel, roll_vel, yaw_vel);
+void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val) {
+	sprintf(msg2, "%s,%d,%d,%d\n\r",c_val, roll_val, roll_val, yaw_val);
 
 	USART2_PutBuffer((uint8_t *) msg2, strlen(msg2));
 }
