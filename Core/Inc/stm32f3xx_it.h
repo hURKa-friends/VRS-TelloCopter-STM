@@ -27,7 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "systick.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -60,7 +60,9 @@ void DMA1_Channel7_IRQHandler(void);
 void TIM2_IRQHandler(void);
 void TIM3_IRQHandler(void);
 /* USER CODE BEGIN EFP */
-
+void SysTick_RegisterCallback(void *callback);
+void TIM2_RegisterCallback(void *callback);
+void TIM3_RegisterCallback(void *callback);
 /* USER CODE END EFP */
 
 #ifdef __cplusplus
