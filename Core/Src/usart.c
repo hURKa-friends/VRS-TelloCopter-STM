@@ -140,7 +140,7 @@ void USART2_PutBuffer(uint8_t *buffer, uint8_t length)
   * @retval None.
   */
 void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val) {
-	sprintf(msg2, "%s,%d,%d,%d\n\r",c_val, roll_val, roll_val, yaw_val);
+	sprintf(msg2, "%s,%d,%d,%d\n\r",c_val, roll_val, pitch_val, yaw_val);
 
 	USART2_PutBuffer((uint8_t *) msg2, strlen(msg2));
 }
