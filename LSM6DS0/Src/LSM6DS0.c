@@ -136,8 +136,8 @@ void LSM6DS0_init_registers()
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG2_G_ADDRESS,  0x00U); // CTRL_REG2  = 0b0000 0000 (Default)
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG3_G_ADDRESS,  0x00U); // CTRL_REG3  = 0b0000 0000 (Default - HP filter off)
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG4_ADDRESS,    0x38U); // CTRL_REG4  = 0b0011 1000 (XYZ Gyro output Enable)
-	LSM6DS0_write_byte(LSM6DS0_CTRL_REG5_XL_ADDRESS, 0x00U); // CTRL_REG5  = 0b0000 0000 (XYZ Accl output Disable)
-	LSM6DS0_write_byte(LSM6DS0_CTRL_REG6_XL_ADDRESS, 0x00U); // CTRL_REG6  = 0b0000 0000 (ODR Off, Default)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG5_XL_ADDRESS, 0x38U); // CTRL_REG5  = 0b0011 1000 (XYZ Accl output Enable)
+	LSM6DS0_write_byte(LSM6DS0_CTRL_REG6_XL_ADDRESS, 0x80U); // CTRL_REG6  = 0b1000 0000 (ODR 238Hz, Default)
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG7_XL_ADDRESS, 0x00U); // CTRL_REG7  = 0b0000 0000 (Default)
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG8_ADDRESS,    0x04U); // CTRL_REG8  = 0b0000 0100 (REG_ADDR automatic increment)
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG9_ADDRESS,    0x00U); // CTRL_REG9  = 0b0000 0000 (Default)
@@ -155,11 +155,11 @@ void LSM6DS0_init_registers()
 	switch(rawGyroScale)
 	{
 		case GYRO_FS_LOW:
-			gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_LOW; break;
+			gyro_scaler = GYRO_FS_VALUE_LOW; break;
 		case GYRO_FS_MID:
-			gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_MID; break;
+			gyro_scaler = GYRO_FS_VALUE_MID; break;
 		case GYRO_FS_HIGH:
-			gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_HIGH; break;
+			gyro_scaler = GYRO_FS_VALUE_HIGH; break;
 		default:
 			deviceState = INIT_ERROR; break; // Undefined behaviour
 	}
@@ -174,13 +174,13 @@ void LSM6DS0_init_registers()
 	switch(rawAcclScale)
 	{
 		case ACCL_FS_LOW:
-			accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_LOW; break;
+			accl_scaler = ACCL_FS_VALUE_LOW; break;
 		case ACCL_FS_MID_LOW:
-			accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_MID_LOW; break;
+			accl_scaler = ACCL_FS_VALUE_MID_LOW; break;
 		case ACCL_FS_MID_HIGH:
-			accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_MID_HIGH; break;
+			accl_scaler = ACCL_FS_VALUE_MID_HIGH; break;
 		case ACCL_FS_HIGH:
-			accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_HIGH; break;
+			accl_scaler = ACCL_FS_VALUE_HIGH; break;
 		default:
 			deviceState = INIT_ERROR; break; // Undefined behaviour
 	}
@@ -241,7 +241,8 @@ void LSM6DS0_get_gyro(int16_t *rawGyroX, int16_t *rawGyroY, int16_t *rawGyroZ)
   */
 float LSM6DS0_parse_accl_data(int16_t rawAccl)
 {
-	float acclValue = ((float)rawAccl) * accl_scaler;
+	float toG = 1000.0;	// conversion to g
+	float acclValue = (((float)rawAccl) * accl_scaler) / toG;
 	return acclValue;
 }
 

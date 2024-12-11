@@ -28,19 +28,19 @@ typedef enum {
 #define GYRO_FS_LOW					0x00U
 #define GYRO_FS_MID					0x01U
 #define GYRO_FS_HIGH				0x03U
-#define GYRO_FS_VALUE_LOW			245.0
-#define GYRO_FS_VALUE_MID			500.0
-#define GYRO_FS_VALUE_HIGH			2000.0
+#define GYRO_FS_VALUE_LOW			8.75
+#define GYRO_FS_VALUE_MID			17.5
+#define GYRO_FS_VALUE_HIGH			70.0
 
 // Accl scaler macros
 #define ACCL_FS_LOW					0x00U
 #define ACCL_FS_MID_LOW				0x02U
 #define ACCL_FS_MID_HIGH			0x03U
 #define ACCL_FS_HIGH				0x01U
-#define ACCL_FS_VALUE_LOW			2.0
-#define ACCL_FS_VALUE_MID_LOW		4.0
-#define ACCL_FS_VALUE_MID_HIGH		8.0
-#define ACCL_FS_VALUE_HIGH			16.0
+#define ACCL_FS_VALUE_LOW			0.061
+#define ACCL_FS_VALUE_MID_LOW		0.122
+#define ACCL_FS_VALUE_MID_HIGH		0.244
+#define ACCL_FS_VALUE_HIGH			0.732
 /* Special Macros END */
 
 /* USER CODE BEGIN Prototypes */
