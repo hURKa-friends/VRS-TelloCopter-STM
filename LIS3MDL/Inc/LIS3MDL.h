@@ -15,7 +15,15 @@
 #define LIS3MDL_NUMBER_OF_CTRL_REG			5
 #define LIS3MDL_NUMBER_OF_OFFSET_REG		2
 #define LIS3MDL_NUMBER_OF_OUT_REG			2
-#define FLOAT_SIZE_IN_BITS		   (8 * sizeof(float))
+#define FLOAT_SIZE_IN_BITS		   		   (8 * sizeof(float))
+#define MAG_FS_LOW							0
+#define MAG_FS_MID_LOW						1
+#define MAG_FS_MID_HIGH						2
+#define MAG_FS_HIGH							3
+#define MAG_FS_VALUE_LOW					4
+#define MAG_FS_VALUE_MID_LOW				8
+#define MAG_FS_VALUE_MID_HIGH				12
+#define MAG_FS_VALUE_HIGH					16
 /* Special Macros END */
 
 /* USER CODE BEGIN Prototypes */

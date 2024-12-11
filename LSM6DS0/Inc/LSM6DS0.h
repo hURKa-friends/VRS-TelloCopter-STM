@@ -22,6 +22,20 @@ typedef enum {
 #define NUMBER_OF_CTRL_REG			3
 #define GYRO_REG_COUNT				6
 #define ACCL_REG_COUNT				6
+#define GYRO_FS_LOW					0
+#define GYRO_FS_MID					1
+#define GYRO_FS_HIGH				3
+#define GYRO_FS_VALUE_LOW			245
+#define GYRO_FS_VALUE_MID			500
+#define GYRO_FS_VALUE_HIGH			2000
+#define ACCL_FS_LOW					0
+#define ACCL_FS_MID_LOW				2
+#define ACCL_FS_MID_HIGH			3
+#define ACCL_FS_HIGH				1
+#define ACCL_FS_VALUE_LOW			2
+#define ACCL_FS_VALUE_MID_LOW		4
+#define ACCL_FS_VALUE_MID_HIGH		8
+#define ACCL_FS_VALUE_HIGH			16
 /* Special Macros END */
 
 /* USER CODE BEGIN Prototypes */

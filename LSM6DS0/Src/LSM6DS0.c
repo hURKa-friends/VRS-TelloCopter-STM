@@ -9,6 +9,7 @@
 
 // Global variables
 LSM6DS0_state deviceState = DISCONNECTED;
+float gyro_scaler, accl_scaler;
 
 /**
   * @brief  Pointer to a function that reads data from an I2C slave device.
@@ -125,6 +126,57 @@ void LSM6DS0_init_registers()
 	uint8_t CTRL_REG_GYRO[NUMBER_OF_CTRL_REG];		// CTRL_REG1 0x10 -> CTRL_REG3 0x12
 	uint8_t CTRL_REG_ACCL[NUMBER_OF_CTRL_REG];  	// CTRL_REG5 0x1F -> CTRL_REG7 0x21
 
+	// SET SCALER FOR GYROSCOPE BASED ON SELECTED MEASURE RANGE
+	uint8_t gyro_full_scale = LSM6DS0_read_byte(LSM6DS0_CTRL_REG1_G_ADDRESS);
+
+	gyro_full_scale >>= 3;
+	gyro_full_scale &= ~(11100);
+
+	switch(gyro_full_scale) {
+	case GYRO_FS_LOW:
+		gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_LOW;
+
+		break;
+	case GYRO_FS_MID:
+		gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_MID;
+
+		break;
+	case GYRO_FS_HIGH:
+		gyro_scaler = GYRO_FS_VALUE_LOW / GYRO_FS_VALUE_HIGH;
+
+		break;
+	default:
+		// N/A ?
+		break;
+	}
+
+	// SET SCALER FOR ACCELEROMETER BASED ON SELECTED MEASURE RANGE
+	uint8_t accl_full_scale = LSM6DS0_read_byte(LSM6DS0_CTRL_REG6_XL_ADDRESS);
+
+	accl_full_scale >>= 3;
+	accl_full_scale &= ~(11100);
+
+	switch(accl_full_scale) {
+	case ACCL_FS_LOW:
+		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_LOW;
+
+		break;
+	case ACCL_FS_MID_LOW:
+		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_MID_LOW;
+
+		break;
+	case ACCL_FS_MID_HIGH:
+		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_MID_HIGH;
+
+		break;
+	case ACCL_FS_HIGH:
+		accl_scaler = ACCL_FS_VALUE_LOW / ACCL_FS_VALUE_HIGH;
+
+		break;
+	default:
+		break;
+	}
+
 	/**
 	  ******************************************************************************
 	  * TODO: LSM6DS0 CTRL_REG initialization such as:
@@ -207,7 +259,8 @@ void LSM6DS0_get_gyro(uint16_t *rawGyroX, uint16_t *rawGyroY, uint16_t *rawGyroZ
   */
 float LSM6DS0_parse_accl_data(uint16_t rawAccl)
 {
-	return 0.0;
+	float acclValue = ((float)rawGyro) * accl_scaler;
+	return acclValue;
 }
 
 /**
@@ -217,8 +270,7 @@ float LSM6DS0_parse_accl_data(uint16_t rawAccl)
   */
 float LSM6DS0_parse_gyro_data(uint16_t rawGyro)
 {
-	float scalingFactor = 8.75; // in mili degrees per second / LSB
 	float toDegrees = 1000.0;	// conversion to degrees
-	float gyroValue = ((((float)rawGyro) * scalingFactor) / toDegrees);
+	float gyroValue = ((((float)rawGyro) * gyro_scaler) / toDegrees);
 	return gyroValue;
 }

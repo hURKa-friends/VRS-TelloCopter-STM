@@ -14,6 +14,7 @@
 int16_t X_offset;
 int16_t Y_offset;
 int16_t Z_offset;
+float mag_scaler;
 
 /**
   * @brief  Pointer to a function that reads data from an I2C slave device.
@@ -150,6 +151,33 @@ void LIS3MDL_init()
 void LIS3MDL_set_registers()
 {
 	uint8_t CTRL_REG_DEVICE[LIS3MDL_NUMBER_OF_CTRL_REG];
+
+	// SET SCALER FOR MAGNETOMETER BASED ON SELECTED MEASURE RANGE
+	uint8_t mag_full_scale = LIS3MDL_read_byte(LIS3MDL_CTRL_REG2_ADDRESS);
+
+	mag_full_scale >>= 5;
+	mag_full_scale &= ~(100);
+
+	switch(mag_full_scale) {
+	case MAG_FS_LOW:
+		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_LOW;
+
+		break;
+	case MAG_FS_MID_LOW:
+		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_MID_LOW;
+
+		break;
+	case MAG_FS_MID_HIGH:
+		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_MID_HIGH;
+
+		break;
+	case MAG_FS_HIGH:
+		mag_scaler = MAG_FS_VALUE_LOW / MAG_FS_VALUE_HIGH;
+
+		break;
+	default:
+		break;
+	}
 
 	/*
 	 * TODO
