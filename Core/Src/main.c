@@ -46,8 +46,13 @@ float gyroZ[MAX_DATA_BUFFER];
 float acclX[MAX_DATA_BUFFER];
 float acclY[MAX_DATA_BUFFER];
 float acclZ[MAX_DATA_BUFFER];
+float magX[MAX_DATA_BUFFER];
+float magY[MAX_DATA_BUFFER];
+float magZ[MAX_DATA_BUFFER];
 float gyroMeanValues[3];
 float acclMeanValues[3];
+float magMeanValues[3];
+float magInitialValues[3];
 float radAngleValues[3];
 float degAngleValues[3];
 float outputData[3];
@@ -82,9 +87,11 @@ void TIM2_IRQ_main(void)
 {
 	int16_t rawGyroX, rawGyroY, rawGyroZ;
 	int16_t rawAcclX, rawAcclY, rawAcclZ;
+	int16_t rawMagX, rawMagY, rawMagZ;
 
 	LSM6DS0_get_gyro(&rawGyroX, &rawGyroY, &rawGyroZ);
 	LSM6DS0_get_accl(&rawAcclX, &rawAcclY, &rawAcclZ);
+	LIS3MDL_get_mag(&rawMagX, &rawMagY, &rawMagZ);
 
 	gyroX[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroX);
 	gyroY[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroY);
@@ -94,6 +101,10 @@ void TIM2_IRQ_main(void)
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
 	acclZ[dataCounter] = LSM6DS0_parse_accl_data(rawAcclZ);
 
+	magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);
+	magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);
+	magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);
+
 	gyroMeanValues[0] = movingAvgFilter((float *)gyroX, MAX_DATA_BUFFER);
 	gyroMeanValues[1] = movingAvgFilter((float *)gyroY, MAX_DATA_BUFFER);
 	gyroMeanValues[2] = movingAvgFilter((float *)gyroZ, MAX_DATA_BUFFER);
@@ -101,6 +112,10 @@ void TIM2_IRQ_main(void)
 	acclMeanValues[0] = movingAvgFilter((float *)acclX, MAX_DATA_BUFFER);
 	acclMeanValues[1] = movingAvgFilter((float *)acclY, MAX_DATA_BUFFER);
 	acclMeanValues[2] = movingAvgFilter((float *)acclZ, MAX_DATA_BUFFER);
+
+	magMeanValues[0] = movingAvgFilter((float *)magX, MAX_DATA_BUFFER);
+	magMeanValues[1] = movingAvgFilter((float *)magY, MAX_DATA_BUFFER);
+	magMeanValues[2] = movingAvgFilter((float *)magZ, MAX_DATA_BUFFER);
 
 	dataCounter++;
 	if(dataCounter >= MAX_DATA_BUFFER)
@@ -197,12 +212,9 @@ int main(void)
   }
 
   LSM6DS0_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
+  LIS3MDL_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
 
-  /* TODO: Change sensor initialization
-	  LIS3MDL_registerReadCallback(I2C1_MultiByteRead);
-	  LIS3MDL_registerWriteCallback(I2C1_MultiByteWrite);
-	  LIS3MDL_init();
-  */
+  LIS3MDL_getInitialMag(magInitialValues);
 
   TIM2_RegisterCallback(TIM2_IRQ_main);
   TIM3_RegisterCallback(TIM3_IRQ_main);

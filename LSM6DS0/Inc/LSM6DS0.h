@@ -45,9 +45,9 @@ typedef enum {
 
 /* USER CODE BEGIN Prototypes */
 uint8_t LSM6DS0_read_byte(uint8_t register_address);
-void LSM6DS0_read_array(uint8_t register_address, uint8_t* data, uint8_t length);
+void LSM6DS0_read_array(uint8_t register_address, uint8_t data[], uint8_t length);
 void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte_value);
-void LSM6DS0_write_array(uint8_t register_address, uint8_t* data, uint8_t length);
+void LSM6DS0_write_array(uint8_t register_address, uint8_t data[], uint8_t length);
 
 void LSM6DS0_init(void *readCallback, void *writeCallback);
 void LSM6DS0_init_registers();

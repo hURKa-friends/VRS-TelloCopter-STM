@@ -54,10 +54,10 @@ uint8_t LSM6DS0_read_byte(uint8_t register_address)
   * @param  length: number of bytes to read.
   * @retval None.
   */
-void LSM6DS0_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
+void LSM6DS0_read_array(uint8_t register_address, uint8_t data[], uint8_t length)
 {
 	uint8_t i2cState = 0;
-	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, data, length);
 	if(i2cState != 0)
 		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
@@ -83,10 +83,10 @@ void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte)
   * @param  length: number of bytes to write.
   * @retval None.
   */
-void LSM6DS0_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
+void LSM6DS0_write_array(uint8_t register_address, uint8_t data[], uint8_t length)
 {
 	uint8_t i2cState = 0;
-	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, data, length);
 	if(i2cState != 0)
 		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
@@ -208,7 +208,7 @@ uint8_t LSM6DS0_get_device_state(void)
 void LSM6DS0_get_accl(int16_t *rawAcclX, int16_t *rawAcclY, int16_t *rawAcclZ)
 {
 	uint8_t rawAcclOut[ACCL_REG_COUNT];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_XL_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
+	LSM6DS0_read_array(LSM6DS0_OUT_X_L_XL_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
 
 	*rawAcclX = (int16_t)(((uint16_t)(rawAcclOut[0]) << 0) |
 	 	 	   	   	   	  ((uint16_t)(rawAcclOut[1]) << 8));
@@ -228,7 +228,7 @@ void LSM6DS0_get_accl(int16_t *rawAcclX, int16_t *rawAcclY, int16_t *rawAcclZ)
 void LSM6DS0_get_gyro(int16_t *rawGyroX, int16_t *rawGyroY, int16_t *rawGyroZ)
 {
 	uint8_t rawGyroOut[GYRO_REG_COUNT];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, rawGyroOut, sizeof(rawGyroOut));
+	LSM6DS0_read_array(LSM6DS0_OUT_X_L_G_ADDRESS, rawGyroOut, sizeof(rawGyroOut));
 
 	*rawGyroX = (int16_t)(((uint16_t)(rawGyroOut[0]) << 0) |
 	 	 	   	   	   	  ((uint16_t)(rawGyroOut[1]) << 8));

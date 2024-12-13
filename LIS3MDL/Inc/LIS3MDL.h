@@ -24,10 +24,12 @@ typedef enum {
 #define LIS3MDL_NUMBER_OF_OFFSET_REG		6
 #define LIS3MDL_NUMBER_OF_OUT_REG			6
 #define FLOAT_SIZE_IN_BITS		   		   (8 * sizeof(float))
-#define MAG_FS_LOW							0
-#define MAG_FS_MID_LOW						1
-#define MAG_FS_MID_HIGH						2
-#define MAG_FS_HIGH							3
+
+// Mag scaler macros
+#define MAG_FS_LOW							0x00U
+#define MAG_FS_MID_LOW						0x01U
+#define MAG_FS_MID_HIGH						0x02U
+#define MAG_FS_HIGH							0x03U
 #define MAG_FS_VALUE_LOW					6842.0
 #define MAG_FS_VALUE_MID_LOW				3421.0
 #define MAG_FS_VALUE_MID_HIGH				2281.0
@@ -39,15 +41,16 @@ void LIS3MDL_registerReadCallback(void *callback);
 void LIS3MDL_registerWriteCallback(void *callback);
 
 uint8_t LIS3MDL_read_byte(uint8_t register_address);
-void LIS3MDL_read_array(uint8_t register_address, uint8_t* data, uint8_t length);
+void LIS3MDL_read_array(uint8_t register_address, uint8_t data[], uint8_t length);
 void LIS3MDL_write_byte(uint8_t register_address, uint8_t byte_value);
-void LIS3MDL_write_array(uint8_t register_address, uint8_t* data, uint8_t length);
+void LIS3MDL_write_array(uint8_t register_address, uint8_t data[], uint8_t length);
 
 void LIS3MDL_init();
 void LIS3MDL_init_registers();
 uint8_t LIS3MDL_get_device_state(void);
 void LIS3MDL_read_offsets();
 
+void LIS3MDL_getInitialMag(float initialMag[]);
 void LIS3MDL_get_mag(int16_t *rawMagX, int16_t *rawMagY, int16_t *rawMagZ);
 float LIS3MDL_parse_mag_data(int16_t rawMag);
 
