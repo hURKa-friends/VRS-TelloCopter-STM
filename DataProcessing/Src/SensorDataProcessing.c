@@ -12,14 +12,14 @@ void calculate_angles(float currentAngles[], float acclData[])
 {
     //currentAngles[0] =  atan2(acclData[0] , sqrt((acclData[1]*acclData[1])+(acclData[2]*acclData[2])));
     //currentAngles[1] =  atan2(acclData[1] , sqrt((acclData[0]*acclData[0])+(acclData[2]*acclData[2])));
-    currentAngles[0] =  atan2(acclData[0] , acclData[2]);
-	currentAngles[1] =  atan2(acclData[1] , acclData[2]);
+    currentAngles[0] =  atan2(acclData[0], acclData[2]);
+	currentAngles[1] =  atan2(acclData[1], acclData[2]);
     //currentAngles[2] =  atan2(sqrt((acclData[0]*acclData[0])+(acclData[1]*acclData[1]))/acclData[2]);
 }
 
 float yaw_fromMag(float magData[])
 {
-    return atan2(magData[0] , magData[1]);
+    return atan2(magData[0], magData[1]);
 }
 
 float movingAvgFilter(float* array, uint8_t sampleCount)

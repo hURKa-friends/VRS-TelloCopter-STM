@@ -117,14 +117,7 @@ void LIS3MDL_init(void *readCallback, void *writeCallback)
 
 	LIS3MDL_init_registers();
 	LIS3MDL_read_offsets();
-
-	// Get initial magnetic sensor values
-	int16_t initMagX, initMagY, initMagZ;
-
-	LIS3MDL_get_mag(&initMagX, &initMagY, &initMagZ);
-	initial_mag[0] = LIS3MDL_parse_mag_data(initMagX);
-	initial_mag[1] = LIS3MDL_parse_mag_data(initMagY);
-	initial_mag[2] = LIS3MDL_parse_mag_data(initMagZ);
+	LIS3MDL_set_init_mag();
 
 	LIS3MDL_deviceState = LIS3MDL_INITIALIZED;
 	return; // LIS3MDL Init success
@@ -197,6 +190,23 @@ void LIS3MDL_getInitialMag(float initialMag[]) {
 	memcpy(initialMag, initial_mag, sizeof(initial_mag));
 }
 
+void LIS3MDL_set_init_mag() {
+	const uint8_t num_of_samples = 20;
+	int16_t rawInitMagX, rawInitMagY, rawInitMagZ;
+	float magX = 0,magY = 0, magZ = 0;
+
+	for (uint8_t i = 0; i < num_of_samples; i++) {
+		LIS3MDL_get_mag(&rawInitMagX, &rawInitMagY, &rawInitMagZ);
+		magX += LIS3MDL_parse_mag_data(rawInitMagX);
+		magY += LIS3MDL_parse_mag_data(rawInitMagY);
+		magZ += LIS3MDL_parse_mag_data(rawInitMagZ);
+	}
+
+	initial_mag[0] = magX / num_of_samples;
+	initial_mag[1] = magY / num_of_samples;
+	initial_mag[2] = magZ / num_of_samples;
+}
+
 /**
   * @brief  Function for reading offsets of values from the sensor LIS3MDL.
   * 		Offsets are written to their respective global variables.
@@ -229,11 +239,11 @@ void LIS3MDL_get_mag(int16_t *rawMagX, int16_t *rawMagY, int16_t *rawMagZ)
 	LIS3MDL_read_array(LIS3MDL_OUT_X_L_ADDRESS, rawMagOut, sizeof(rawMagOut));
 
 	*rawMagX = (int16_t)(((uint16_t)(rawMagOut[0]) << 0) |
-						  ((uint16_t)(rawMagOut[1]) << 8)) - mag_offsets[0];
+						  ((uint16_t)(rawMagOut[1]) << 8));// - mag_offsets[0];
 	*rawMagY = (int16_t)(((uint16_t)(rawMagOut[2]) << 0) |
-						  ((uint16_t)(rawMagOut[3]) << 8)) - mag_offsets[1];
+						  ((uint16_t)(rawMagOut[3]) << 8));// - mag_offsets[1];
 	*rawMagZ = (int16_t)(((uint16_t)(rawMagOut[4]) << 0) |
-						  ((uint16_t)(rawMagOut[5]) << 8)) - mag_offsets[2];
+						  ((uint16_t)(rawMagOut[5]) << 8));// - mag_offsets[2];
 }
 
 /**

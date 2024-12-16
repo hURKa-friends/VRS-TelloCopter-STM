@@ -114,9 +114,9 @@ void TIM2_IRQ_main(void)
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
 	acclZ[dataCounter] = LSM6DS0_parse_accl_data(rawAcclZ);
 
-	magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);
-	magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);
-	magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);
+	magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);// - magInitialValues[0];
+	magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);// - magInitialValues[1];
+	magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);// - magInitialValues[2];
 
 	gyroMeanValues[0] = movingAvgFilter((float *)gyroX, MAX_DATA_BUFFER);
 	gyroMeanValues[1] = movingAvgFilter((float *)gyroY, MAX_DATA_BUFFER);
@@ -129,6 +129,22 @@ void TIM2_IRQ_main(void)
 	magMeanValues[0] = movingAvgFilter((float *)magX, MAX_DATA_BUFFER);
 	magMeanValues[1] = movingAvgFilter((float *)magY, MAX_DATA_BUFFER);
 	magMeanValues[2] = movingAvgFilter((float *)magZ, MAX_DATA_BUFFER);
+
+	/*if (magMeanValues[0] > 0) {
+		magMeanValues[0] += 1;
+	} else {
+		magMeanValues[0] -= 1;
+	}
+	if (magMeanValues[1] > 0) {
+		magMeanValues[1] += 1;
+	} else {
+		magMeanValues[1] -= 1;
+	}
+	if (magMeanValues[2] > 0) {
+		magMeanValues[2] += 1;
+	} else {
+		magMeanValues[2] -= 1;
+	}*/
 
 	dataCounter++;
 	if(dataCounter >= MAX_DATA_BUFFER)

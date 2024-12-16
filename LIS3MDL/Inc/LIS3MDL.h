@@ -50,6 +50,7 @@ void LIS3MDL_init();
 void LIS3MDL_init_registers();
 uint8_t LIS3MDL_get_device_state(void);
 void LIS3MDL_read_offsets();
+void LIS3MDL_set_init_mag();
 
 void LIS3MDL_getInitialMag(float initialMag[]);
 void LIS3MDL_get_mag(int16_t *rawMagX, int16_t *rawMagY, int16_t *rawMagZ);
