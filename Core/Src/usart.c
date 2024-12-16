@@ -87,13 +87,12 @@ void MX_USART2_UART_Init(void)
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_7, LL_DMA_MDATAALIGN_BYTE);
 
+  /* USER CODE BEGIN USART2_Init 1 */
   LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_7, LL_USART_DMA_GetRegAddr(USART2, LL_USART_DMA_REG_DATA_TRANSMIT));
 
   LL_USART_EnableDMAReq_TX(USART2);
 
   LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_7);
-
-  /* USER CODE BEGIN USART2_Init 1 */
 
   /* USER CODE END USART2_Init 1 */
   USART_InitStruct.BaudRate = 115200;
@@ -139,8 +138,8 @@ void USART2_PutBuffer(uint8_t *buffer, uint8_t length)
   * @param  yaw_val: Control value of yaw.
   * @retval None.
   */
-void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val) {
-	sprintf(msg2, "%s,%d,%d,%d\n\r",c_val, roll_val, pitch_val, yaw_val);
+void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val, int8_t height_val) {
+	sprintf(msg2, "%s,%d,%d,%d,%d\n\r",c_val, roll_val, pitch_val, yaw_val, height_val);
 
 	USART2_PutBuffer((uint8_t *) msg2, strlen(msg2));
 }

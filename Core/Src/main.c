@@ -40,6 +40,8 @@
 /* USER CODE BEGIN PD */
 #define MAX_DATA_BUFFER		8
 uint8_t dataCounter = 0;
+uint8_t upStatus = 0;
+uint8_t downStatus = 0;
 float gyroX[MAX_DATA_BUFFER];
 float gyroY[MAX_DATA_BUFFER];
 float gyroZ[MAX_DATA_BUFFER];
@@ -59,6 +61,24 @@ float initialYaw;
 float radAngleValues[3];
 float degAngleValues[3];
 float outputData[3];
+float height = 0;
+
+// GPIO UP
+EDGE_TYPE upDetectedEdgeType;
+EDGE_TYPE upButtonEdgeType;
+uint32_t upButtonCounter;
+uint8_t upCurrButtonState;
+uint8_t upPrevButtonState;
+uint8_t upState;
+
+// GPIO DOWN
+EDGE_TYPE downDetectedEdgeType;
+EDGE_TYPE downButtonEdgeType;
+uint32_t downButtonCounter;
+uint8_t downCurrButtonState;
+uint8_t downPrevButtonState;
+uint8_t downState;
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -130,6 +150,32 @@ void TIM2_IRQ_main(void)
 	magMeanValues[1] = movingAvgFilter((float *)magY, MAX_DATA_BUFFER);
 	magMeanValues[2] = movingAvgFilter((float *)magZ, MAX_DATA_BUFFER);
 
+	// UP logic
+	upCurrButtonState = LL_GPIO_IsInputPinSet(GPIOB, UP_SWITCH_Pin);
+	edgeDetect(upCurrButtonState, upPrevButtonState, 4, &upButtonCounter, &upButtonEdgeType, &upDetectedEdgeType);
+	switch (upButtonEdgeType)
+	{
+		case RISE:
+			upState = 0; break;
+		case FALL:
+			upState = 1; break;
+		default: break;
+	}
+	upPrevButtonState = upCurrButtonState;
+
+	// DOWN logic
+	downCurrButtonState = LL_GPIO_IsInputPinSet(GPIOB, DOWN_SWITCH_Pin);
+	edgeDetect(downCurrButtonState, downPrevButtonState, 4, &downButtonCounter, &downButtonEdgeType, &downDetectedEdgeType);
+	switch (downButtonEdgeType)
+	{
+		case RISE:
+			downState = 0; break;
+		case FALL:
+			downState = 1; break;
+		default: break;
+	}
+	downPrevButtonState = downCurrButtonState;
+
 	dataCounter++;
 	if(dataCounter >= MAX_DATA_BUFFER)
 		dataCounter = 0;
@@ -151,16 +197,23 @@ void TIM3_IRQ_main(void)
 		degAngleValues[i] = rad2deg(radAngleValues[i]);
 
 	degAngleValues[2] = rad2deg(radAngleValues[2]) - initialYaw;
-
+  
 	// X - Pitch
 	outputData[0] = linInterpolation(degAngleValues[0], 5.0, 45.0, 0, 100);
 	// Y - Roll
 	outputData[1] = linInterpolation(degAngleValues[1], 5.0, 45.0, 0, 100);
 	// Z - Yaw
-	outputData[2] = linInterpolation(degAngleValues[2], 5.0, 45.0, 0, 100);
+	outputData[2] = linInterpolation(degAngleValues[2], 5.0, 30.0, 0, 100);
+
+	if (upState)
+		height = 100;
+	else if (downState)
+		height = -100;
+	else
+		height = 0;
 
 	// Send Data
-	USART2_send_data("NONE", (int8_t)outputData[1], (int8_t)outputData[0], (int8_t)outputData[2]);
+	USART2_send_data("NONE", (int8_t)outputData[0]*-1, (int8_t)outputData[1]*-1, (int8_t)outputData[2]*-1, (int8_t)height);
 }
 
 /**
@@ -172,7 +225,6 @@ void SystemMainCycleRoutine(void)
 {
 	LL_GPIO_SetOutputPin(GPIOA, TESTPIN_4_Pin);
 	asm("#NOP");
-	// TODO: Possible Data Processing ??
 	LL_GPIO_ResetOutputPin(GPIOA, TESTPIN_4_Pin);
 }
 /* USER CODE END 0 */
@@ -218,7 +270,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   MX_TIM3_Init();
-
   /* USER CODE BEGIN 2 */
   for (int i = 0; i < MAX_DATA_BUFFER; i++)
   {
@@ -248,9 +299,9 @@ int main(void)
 	while (1)
 	{
 		SystemMainCycleRoutine();
-		/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-		/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
   /* USER CODE END 3 */
 }

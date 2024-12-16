@@ -82,10 +82,10 @@ void Error_Handler(void);
 #define TESTPIN_3_GPIO_Port GPIOA
 #define TESTPIN_4_Pin LL_GPIO_PIN_11
 #define TESTPIN_4_GPIO_Port GPIOA
-#define ACT_SWITCH_Pin LL_GPIO_PIN_4
-#define ACT_SWITCH_GPIO_Port GPIOB
-#define ARM_SWITCH_Pin LL_GPIO_PIN_5
-#define ARM_SWITCH_GPIO_Port GPIOB
+#define DOWN_SWITCH_Pin LL_GPIO_PIN_4
+#define DOWN_SWITCH_GPIO_Port GPIOB
+#define UP_SWITCH_Pin LL_GPIO_PIN_5
+#define UP_SWITCH_GPIO_Port GPIOB
 #ifndef NVIC_PRIORITYGROUP_0
 #define NVIC_PRIORITYGROUP_0         ((uint32_t)0x00000007) /*!< 0 bit  for pre-emption priority,
                                                                  4 bits for subpriority */

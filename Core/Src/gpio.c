@@ -66,13 +66,35 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = ACT_SWITCH_Pin|ARM_SWITCH_Pin;
+  GPIO_InitStruct.Pin = DOWN_SWITCH_Pin|UP_SWITCH_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
   LL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
 
 /* USER CODE BEGIN 2 */
-
+void edgeDetect(uint8_t pin_state, uint8_t prev_pin_state, uint32_t samples, uint32_t* counter, EDGE_TYPE* edge_type, EDGE_TYPE* detected_edge_type)
+{
+	if (pin_state != prev_pin_state)
+	{
+		*counter = 1;
+		if (pin_state < prev_pin_state)
+			*detected_edge_type = FALL;
+		else
+			*detected_edge_type = RISE;
+	}
+	else
+	{
+		if (*counter != samples)
+			*edge_type = NONE;
+		else if (*counter == samples)
+		{
+			*edge_type = *detected_edge_type;
+			*detected_edge_type = NONE;
+		}
+		if (*detected_edge_type != NONE)
+			*counter = *counter + 1;
+	}
+}
 /* USER CODE END 2 */
