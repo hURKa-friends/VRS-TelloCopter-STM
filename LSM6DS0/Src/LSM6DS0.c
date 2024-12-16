@@ -8,8 +8,9 @@
 #include "LSM6DS0.h"
 
 // Global variables
-LSM6DS0_state deviceState = DISCONNECTED;
+LSM6DS0_state LSM6DS0_deviceState = LSM6DS0_DISCONNECTED;
 float gyro_scaler, accl_scaler;
+float gyro_calibration[3];
 
 /**
   * @brief  Pointer to a function that reads data from an I2C slave device.
@@ -43,7 +44,7 @@ uint8_t LSM6DS0_read_byte(uint8_t register_address)
 	uint8_t i2cState = 0, byte = 0;
 	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 	return byte;
 }
 
@@ -54,12 +55,12 @@ uint8_t LSM6DS0_read_byte(uint8_t register_address)
   * @param  length: number of bytes to read.
   * @retval None.
   */
-void LSM6DS0_read_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
+void LSM6DS0_read_array(uint8_t register_address, uint8_t data[], uint8_t length)
 {
 	uint8_t i2cState = 0;
-	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, data, length);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
 
 /**
@@ -73,7 +74,7 @@ void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte)
 	uint8_t i2cState = 0;
 	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
 
 /**
@@ -83,16 +84,18 @@ void LSM6DS0_write_byte(uint8_t register_address, uint8_t byte)
   * @param  length: number of bytes to write.
   * @retval None.
   */
-void LSM6DS0_write_bytes(uint8_t register_address, uint8_t bytes[], uint8_t num_of_bytes)
+void LSM6DS0_write_array(uint8_t register_address, uint8_t data[], uint8_t length)
 {
 	uint8_t i2cState = 0;
-	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, bytes, num_of_bytes);
+	i2cState = I2C_WriteData(LSM6DS0_DEVICE_ADDRESS, register_address, data, length);
 	if(i2cState != 0)
-		deviceState = I2C_ERROR;
+		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
 }
 
 /**
   * @brief  Function for initializing the sensor LSM6DS0.
+  * @param  readCallback: callback function for I2C reading.
+  * @param  writeCallback: callback function for I2C writing.
   * @retval None.
   */
 void LSM6DS0_init(void *readCallback, void *writeCallback)
@@ -106,14 +109,17 @@ void LSM6DS0_init(void *readCallback, void *writeCallback)
 
 	// Check if correct device is connected
 	if(LSM6DS0_read_byte(LSM6DS0_WHO_AM_I_ADDRESS) == LSM6DS0_WHO_AM_I_VALUE)
-		deviceState = CONNECTED;
+		LSM6DS0_deviceState = LSM6DS0_CONNECTED;
 
-	if (deviceState != CONNECTED)
+	if (LSM6DS0_deviceState != LSM6DS0_CONNECTED)
 		return; // LSM6DS0 Init failed.
 
 	LSM6DS0_init_registers();
-	deviceState = INITIALIZED;
-	return;  // LSM6DS0 Init succes.
+
+	LSM6DS0_calibrate_gyro();
+
+	LSM6DS0_deviceState = LSM6DS0_INITIALIZED;
+	return;  // LSM6DS0 Init success.
 }
 
 /**
@@ -161,7 +167,7 @@ void LSM6DS0_init_registers()
 		case GYRO_FS_HIGH:
 			gyro_scaler = GYRO_FS_VALUE_HIGH; break;
 		default:
-			deviceState = INIT_ERROR; break; // Undefined behaviour
+			LSM6DS0_deviceState = LSM6DS0_INIT_ERROR; break; // Undefined behaviour
 	}
 
 	/*
@@ -182,7 +188,7 @@ void LSM6DS0_init_registers()
 		case ACCL_FS_HIGH:
 			accl_scaler = ACCL_FS_VALUE_HIGH; break;
 		default:
-			deviceState = INIT_ERROR; break; // Undefined behaviour
+			LSM6DS0_deviceState = LSM6DS0_INIT_ERROR; break; // Undefined behaviour
 	}
 }
 
@@ -193,7 +199,7 @@ void LSM6DS0_init_registers()
   */
 uint8_t LSM6DS0_get_device_state(void)
 {
-	return deviceState;
+	return LSM6DS0_deviceState;
 }
 
 /**
@@ -206,7 +212,7 @@ uint8_t LSM6DS0_get_device_state(void)
 void LSM6DS0_get_accl(int16_t *rawAcclX, int16_t *rawAcclY, int16_t *rawAcclZ)
 {
 	uint8_t rawAcclOut[ACCL_REG_COUNT];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_XL_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
+	LSM6DS0_read_array(LSM6DS0_OUT_X_L_XL_ADDRESS, rawAcclOut, sizeof(rawAcclOut));
 
 	*rawAcclX = (int16_t)(((uint16_t)(rawAcclOut[0]) << 0) |
 	 	 	   	   	   	  ((uint16_t)(rawAcclOut[1]) << 8));
@@ -226,7 +232,7 @@ void LSM6DS0_get_accl(int16_t *rawAcclX, int16_t *rawAcclY, int16_t *rawAcclZ)
 void LSM6DS0_get_gyro(int16_t *rawGyroX, int16_t *rawGyroY, int16_t *rawGyroZ)
 {
 	uint8_t rawGyroOut[GYRO_REG_COUNT];
-	LSM6DS0_read_bytes(LSM6DS0_OUT_X_L_G_ADDRESS, rawGyroOut, sizeof(rawGyroOut));
+	LSM6DS0_read_array(LSM6DS0_OUT_X_L_G_ADDRESS, rawGyroOut, sizeof(rawGyroOut));
 
 	*rawGyroX = (int16_t)(((uint16_t)(rawGyroOut[0]) << 0) |
 	 	 	   	   	   	  ((uint16_t)(rawGyroOut[1]) << 8));
@@ -258,4 +264,61 @@ float LSM6DS0_parse_gyro_data(int16_t rawGyro)
 	float toDegrees = 1000.0;	// conversion to degrees
 	float gyroValue = ((((float)rawGyro) * gyro_scaler) / toDegrees);
 	return gyroValue;
+}
+
+void LSM6DS0_calibrate_gyro() {
+	const uint8_t num_of_samples = 100;
+
+	int16_t gyro_X[num_of_samples];
+	int16_t gyro_Y[num_of_samples];
+	int16_t gyro_Z[num_of_samples];
+	float gyro_vel_X[num_of_samples];
+	float gyro_vel_Y[num_of_samples];
+	float gyro_vel_Z[num_of_samples];
+	float gyro_X_min, gyro_X_max, gyro_Y_min, gyro_Y_max, gyro_Z_min, gyro_Z_max;
+
+	for (uint8_t i = 0; i < num_of_samples; i++) {
+		LSM6DS0_get_gyro(&gyro_X[i], &gyro_Y[i], &gyro_Z[i]);
+		gyro_vel_X[i] = LSM6DS0_parse_gyro_data(gyro_X[i]);
+		gyro_vel_Y[i] = LSM6DS0_parse_gyro_data(gyro_Y[i]);
+		gyro_vel_Z[i] = LSM6DS0_parse_gyro_data(gyro_Z[i]);
+
+		if (i == 0) {
+			gyro_X_min = gyro_vel_X[i];
+			gyro_X_max = gyro_vel_X[i];
+			gyro_Y_min = gyro_vel_Y[i];
+			gyro_Y_max = gyro_vel_Y[i];
+			gyro_Z_min = gyro_vel_Z[i];
+			gyro_Z_max = gyro_vel_Z[i];
+		}
+
+		if (gyro_vel_X[i] < gyro_X_min) {
+			gyro_X_min = gyro_vel_X[i];
+		}
+		if (gyro_vel_X[i] > gyro_X_max) {
+			gyro_X_max = gyro_vel_X[i];
+		}
+		if (gyro_vel_Y[i] < gyro_Y_min) {
+			gyro_Y_min = gyro_vel_Y[i];
+		}
+		if (gyro_vel_Y[i] > gyro_Y_max) {
+			gyro_Y_max = gyro_vel_Y[i];
+		}
+		if (gyro_vel_Z[i] < gyro_Z_min) {
+			gyro_Z_min = gyro_vel_Z[i];
+		}
+		if (gyro_vel_Z[i] > gyro_Z_max) {
+			gyro_Z_max = gyro_vel_Z[i];
+		}
+
+		LL_mDelay(round(1 / 238));
+	}
+
+	gyro_calibration[0] = (gyro_X_max + gyro_X_min) / 2;
+	gyro_calibration[1] = (gyro_Y_max + gyro_Y_min) / 2;
+	gyro_calibration[2] = (gyro_Z_max + gyro_Z_min) / 2;
+}
+
+void LSM6DS0_get_gyro_calib(float gyroCalib[]) {
+	memcpy(gyroCalib, gyro_calibration, sizeof(gyro_calibration));
 }

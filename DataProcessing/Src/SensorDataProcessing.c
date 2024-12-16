@@ -10,9 +10,16 @@
 
 void calculate_angles(float currentAngles[], float acclData[])
 {
-    currentAngles[0] =  atan(acclData[0]/sqrt((acclData[1]*acclData[1])+(acclData[2]*acclData[2])));
-    currentAngles[1] =  atan(acclData[1]/sqrt((acclData[0]*acclData[0])+(acclData[2]*acclData[2])));
-    currentAngles[2] =  atan(sqrt((acclData[0]*acclData[0])+(acclData[1]*acclData[1]))/acclData[2]);
+    //currentAngles[0] =  atan2(acclData[0] , sqrt((acclData[1]*acclData[1])+(acclData[2]*acclData[2])));
+    //currentAngles[1] =  atan2(acclData[1] , sqrt((acclData[0]*acclData[0])+(acclData[2]*acclData[2])));
+    currentAngles[0] =  atan2(acclData[0] , acclData[2]);
+	currentAngles[1] =  atan2(acclData[1] , acclData[2]);
+    //currentAngles[2] =  atan2(sqrt((acclData[0]*acclData[0])+(acclData[1]*acclData[1]))/acclData[2]);
+}
+
+float yaw_fromMag(float magData[])
+{
+    return atan2(magData[0] , magData[1]);
 }
 
 float movingAvgFilter(float* array, uint8_t sampleCount)
@@ -51,6 +58,20 @@ float linInterpolation(float input, float inputLimLow, float inputLimHigh, float
 
 	velocity = outputLimLow + ((input - inputLimLow) / (inputLimHigh - inputLimLow)) * (outputLimHigh - outputLimLow);
 	return velocity * sign;
+}
+
+flip_state flipSensor(float gyroData[]) {
+	if(gyroData[0] > 280) {
+		return FRONTFLIP;
+	} else if(gyroData[0] < -280){
+		return BACKFLIP;
+	} else if(gyroData[1] > 280) {
+		return RIGHTFLIP;
+	} else if(gyroData[1] < -280) {
+		return LEFTFLIP;
+	} else {
+		return NOFLIP;
+	}
 }
 
 float rad2deg(float rad)
