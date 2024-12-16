@@ -33,13 +33,17 @@ extern "C" {
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
-
+typedef enum {
+	NONE = 0, // When Button is inactive
+	RISE = 1, // When Button is released, pin 3 has Voltage from Pull-Up
+	FALL = 2  // When Button is pressed, pin 3 is pulled to the GND
+} EDGE_TYPE;
 /* USER CODE END Private defines */
 
 void MX_GPIO_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void edgeDetect(uint8_t pin_state, uint8_t prev_pin_state, uint32_t samples, uint32_t* counter, EDGE_TYPE* edge_type, EDGE_TYPE* detected_edge_type);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
