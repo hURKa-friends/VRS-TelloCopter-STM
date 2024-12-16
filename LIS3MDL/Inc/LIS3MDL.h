@@ -10,6 +10,7 @@
 
 #include "main.h"
 #include "LIS3MDL_map.h"
+#include <string.h>
 
 typedef enum {
 	LIS3MDL_DISCONNECTED = 0x00U,

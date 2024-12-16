@@ -50,9 +50,12 @@ float magX[MAX_DATA_BUFFER];
 float magY[MAX_DATA_BUFFER];
 float magZ[MAX_DATA_BUFFER];
 float gyroMeanValues[3];
+float gyroAngles[3];
+float gyroCalib[3];
 float acclMeanValues[3];
 float magMeanValues[3];
 float magInitialValues[3];
+float initialYaw;
 float radAngleValues[3];
 float degAngleValues[3];
 float outputData[3];
@@ -93,9 +96,19 @@ void TIM2_IRQ_main(void)
 	LSM6DS0_get_accl(&rawAcclX, &rawAcclY, &rawAcclZ);
 	LIS3MDL_get_mag(&rawMagX, &rawMagY, &rawMagZ);
 
-	gyroX[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroX);
-	gyroY[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroY);
-	gyroZ[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroZ);
+	gyroX[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroX) - gyroCalib[0];
+	gyroY[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroY) - gyroCalib[1];
+	gyroZ[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroZ) - gyroCalib[2];
+
+	if (fabs(gyroX[dataCounter]) > 0.3) {
+		gyroAngles[0] += gyroX[dataCounter] * 8.333e-3;
+	}
+	if (fabs(gyroY[dataCounter]) > 0.3) {
+		gyroAngles[1] += gyroY[dataCounter] * 8.333e-3;
+	}
+	if (fabs(gyroZ[dataCounter]) > 0.3) {
+		gyroAngles[2] += gyroZ[dataCounter] * 8.333e-3;
+	}
 
 	acclX[dataCounter] = LSM6DS0_parse_accl_data(rawAcclX);
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
@@ -132,9 +145,12 @@ void TIM2_IRQ_main(void)
 void TIM3_IRQ_main(void)
 {
 	calculate_angles(radAngleValues, acclMeanValues);
+	radAngleValues[2] = yaw_fromMag(magMeanValues);
 
-	for(int i = 0; i < 3; i++)
+	for(int i = 0; i < 2; i++)
 		degAngleValues[i] = rad2deg(radAngleValues[i]);
+
+	degAngleValues[2] = rad2deg(radAngleValues[2]) - initialYaw;
 
 	// X - Pitch
 	outputData[0] = linInterpolation(degAngleValues[0], 5.0, 45.0, 0, 100);
@@ -214,7 +230,14 @@ int main(void)
   LSM6DS0_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
   LIS3MDL_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
 
+  gyroAngles[0] = 0;
+  gyroAngles[1] = 0;
+  gyroAngles[2] = 0;
+
+  LSM6DS0_get_gyro_calib(gyroCalib);
+
   LIS3MDL_getInitialMag(magInitialValues);
+  initialYaw = rad2deg(yaw_fromMag(magInitialValues));
 
   TIM2_RegisterCallback(TIM2_IRQ_main);
   TIM3_RegisterCallback(TIM3_IRQ_main);

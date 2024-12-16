@@ -194,7 +194,7 @@ uint8_t LIS3MDL_get_device_state(void)
   * @retval None.
   */
 void LIS3MDL_getInitialMag(float initialMag[]) {
-	memcpy(initialMag, initial_mag, sizeof(initialMag));
+	memcpy(initialMag, initial_mag, sizeof(initial_mag));
 }
 
 /**

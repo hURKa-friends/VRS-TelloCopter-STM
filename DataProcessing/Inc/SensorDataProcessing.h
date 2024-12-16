@@ -18,7 +18,7 @@ float linInterpolation(float input, float inputLimLow, float inputLimHigh, float
 
 float rad2deg(float rad);
 
-void yaw_fromMag(float yaw, float magData[]);
+float yaw_fromMag(float magData[]);
 
 typedef enum {
 	FRONTFLIP = 0x00U,

@@ -10,6 +10,7 @@
 // Global variables
 LSM6DS0_state LSM6DS0_deviceState = LSM6DS0_DISCONNECTED;
 float gyro_scaler, accl_scaler;
+float gyro_calibration[3];
 
 /**
   * @brief  Pointer to a function that reads data from an I2C slave device.
@@ -114,6 +115,9 @@ void LSM6DS0_init(void *readCallback, void *writeCallback)
 		return; // LSM6DS0 Init failed.
 
 	LSM6DS0_init_registers();
+
+	LSM6DS0_calibrate_gyro();
+
 	LSM6DS0_deviceState = LSM6DS0_INITIALIZED;
 	return;  // LSM6DS0 Init success.
 }
@@ -260,4 +264,61 @@ float LSM6DS0_parse_gyro_data(int16_t rawGyro)
 	float toDegrees = 1000.0;	// conversion to degrees
 	float gyroValue = ((((float)rawGyro) * gyro_scaler) / toDegrees);
 	return gyroValue;
+}
+
+void LSM6DS0_calibrate_gyro() {
+	const uint8_t num_of_samples = 100;
+
+	int16_t gyro_X[num_of_samples];
+	int16_t gyro_Y[num_of_samples];
+	int16_t gyro_Z[num_of_samples];
+	float gyro_vel_X[num_of_samples];
+	float gyro_vel_Y[num_of_samples];
+	float gyro_vel_Z[num_of_samples];
+	float gyro_X_min, gyro_X_max, gyro_Y_min, gyro_Y_max, gyro_Z_min, gyro_Z_max;
+
+	for (uint8_t i = 0; i < num_of_samples; i++) {
+		LSM6DS0_get_gyro(&gyro_X[i], &gyro_Y[i], &gyro_Z[i]);
+		gyro_vel_X[i] = LSM6DS0_parse_gyro_data(gyro_X[i]);
+		gyro_vel_Y[i] = LSM6DS0_parse_gyro_data(gyro_Y[i]);
+		gyro_vel_Z[i] = LSM6DS0_parse_gyro_data(gyro_Z[i]);
+
+		if (i == 0) {
+			gyro_X_min = gyro_vel_X[i];
+			gyro_X_max = gyro_vel_X[i];
+			gyro_Y_min = gyro_vel_Y[i];
+			gyro_Y_max = gyro_vel_Y[i];
+			gyro_Z_min = gyro_vel_Z[i];
+			gyro_Z_max = gyro_vel_Z[i];
+		}
+
+		if (gyro_vel_X[i] < gyro_X_min) {
+			gyro_X_min = gyro_vel_X[i];
+		}
+		if (gyro_vel_X[i] > gyro_X_max) {
+			gyro_X_max = gyro_vel_X[i];
+		}
+		if (gyro_vel_Y[i] < gyro_Y_min) {
+			gyro_Y_min = gyro_vel_Y[i];
+		}
+		if (gyro_vel_Y[i] > gyro_Y_max) {
+			gyro_Y_max = gyro_vel_Y[i];
+		}
+		if (gyro_vel_Z[i] < gyro_Z_min) {
+			gyro_Z_min = gyro_vel_Z[i];
+		}
+		if (gyro_vel_Z[i] > gyro_Z_max) {
+			gyro_Z_max = gyro_vel_Z[i];
+		}
+
+		LL_mDelay(round(1 / 238));
+	}
+
+	gyro_calibration[0] = (gyro_X_max + gyro_X_min) / 2;
+	gyro_calibration[1] = (gyro_Y_max + gyro_Y_min) / 2;
+	gyro_calibration[2] = (gyro_Z_max + gyro_Z_min) / 2;
+}
+
+void LSM6DS0_get_gyro_calib(float gyroCalib[]) {
+	memcpy(gyroCalib, gyro_calibration, sizeof(gyro_calibration));
 }
