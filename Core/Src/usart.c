@@ -138,9 +138,14 @@ void USART2_PutBuffer(uint8_t *buffer, uint8_t length)
   * @param  yaw_val: Control value of yaw.
   * @retval None.
   */
-void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val, int8_t height_val) {
+void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val, int8_t height_val)
+{
 	sprintf(msg2, "%s,%d,%d,%d,%d\n\r",c_val, roll_val, pitch_val, yaw_val, height_val);
-
+	USART2_PutBuffer((uint8_t *) msg2, strlen(msg2));
+}
+void USART2_send_debug_data(float x, float y, float z)
+{
+	sprintf(msg2, "%.4f,%.4f,%.4f\n\r",x,y,z);
 	USART2_PutBuffer((uint8_t *) msg2, strlen(msg2));
 }
 /* USER CODE END 1 */

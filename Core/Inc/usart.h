@@ -40,6 +40,7 @@ void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 void USART2_send_data(char c_val[], int8_t roll_val, int8_t pitch_val, int8_t yaw_val, int8_t height_val);
+void USART2_send_debug_data(float x, float y, float z);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

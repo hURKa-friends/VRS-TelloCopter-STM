@@ -219,11 +219,11 @@ void LIS3MDL_read_offsets()
 	LIS3MDL_read_array(LIS3MDL_OFFSET_X_REG_L_M_ADDRESS, LIS3MDL_offsets, sizeof(LIS3MDL_offsets));
 
 	mag_offsets[0] = (int16_t)(((uint16_t)(LIS3MDL_offsets[0]) << 0) |
-						  ((uint16_t)(LIS3MDL_offsets[1]) << 8));
+						  	   ((uint16_t)(LIS3MDL_offsets[1]) << 8));
 	mag_offsets[1] = (int16_t)(((uint16_t)(LIS3MDL_offsets[2]) << 0) |
-						  ((uint16_t)(LIS3MDL_offsets[3]) << 8));
+						  	   ((uint16_t)(LIS3MDL_offsets[3]) << 8));
 	mag_offsets[2] = (int16_t)(((uint16_t)(LIS3MDL_offsets[4]) << 0) |
-						  ((uint16_t)(LIS3MDL_offsets[5]) << 8));
+						  	   ((uint16_t)(LIS3MDL_offsets[5]) << 8));
 }
 
 /**
@@ -239,11 +239,11 @@ void LIS3MDL_get_mag(int16_t *rawMagX, int16_t *rawMagY, int16_t *rawMagZ)
 	LIS3MDL_read_array(LIS3MDL_OUT_X_L_ADDRESS, rawMagOut, sizeof(rawMagOut));
 
 	*rawMagX = (int16_t)(((uint16_t)(rawMagOut[0]) << 0) |
-						  ((uint16_t)(rawMagOut[1]) << 8));// - mag_offsets[0];
+						  ((uint16_t)(rawMagOut[1]) << 8)) - mag_offsets[0];
 	*rawMagY = (int16_t)(((uint16_t)(rawMagOut[2]) << 0) |
-						  ((uint16_t)(rawMagOut[3]) << 8));// - mag_offsets[1];
+						  ((uint16_t)(rawMagOut[3]) << 8)) - mag_offsets[1];
 	*rawMagZ = (int16_t)(((uint16_t)(rawMagOut[4]) << 0) |
-						  ((uint16_t)(rawMagOut[5]) << 8));// - mag_offsets[2];
+						  ((uint16_t)(rawMagOut[5]) << 8)) - mag_offsets[2];
 }
 
 /**

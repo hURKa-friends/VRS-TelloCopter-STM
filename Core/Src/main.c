@@ -29,6 +29,7 @@
 #include "LSM6DS0.h"
 #include "LIS3MDL.h"
 #include "SensorDataProcessing.h"
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +56,10 @@ float magX[MAX_DATA_BUFFER];
 float magY[MAX_DATA_BUFFER];
 float magZ[MAX_DATA_BUFFER];
 float magInitialValues[3];
+uint8_t magnetCalibration = 0;
+float magMax[3];
+float magMin[3];
+float magCalib[3];
 float initialYaw;
 
 // Processed data
@@ -67,9 +72,11 @@ float previousGyroAngles[3];
 float gyroAngles[3];
 float radAngleValues[3];
 float degAngleValues[3];
+float magCorrectedValues[3];
 
 float filteredRollAngle = 0;
 float filteredPitchAngle = 0;
+float filteredYawAngle = 0;
 
 float outputData[3];
 
@@ -142,9 +149,18 @@ void TIM2_IRQ_main(void)
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
 	acclZ[dataCounter] = LSM6DS0_parse_accl_data(rawAcclZ);
 
-	magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);// - magInitialValues[0];
-	magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);// - magInitialValues[1];
-	magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);// - magInitialValues[2];
+	if(magnetCalibration)
+	{
+		magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);// - magInitialValues[0];
+		magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);// - magInitialValues[1];
+		magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);// - magInitialValues[2];
+	}
+	else
+	{
+		magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX) - magCalib[0];// - magInitialValues[0];
+		magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY) - magCalib[1];// - magInitialValues[1];
+		magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ) - magCalib[2];// - magInitialValues[2];
+	}
 
 	// Process data
 	acclMeanValues[0] = movingAvgFilter((float *)acclX, MAX_DATA_BUFFER);
@@ -208,59 +224,100 @@ void TIM2_IRQ_main(void)
   */
 void TIM3_IRQ_main(void)
 {
-	char commandChar[10] = "NONE";
+	if(magnetCalibration)
+	{
+		for(int i = 0; i<3; i++)
+		{
+			if(magMeanValues[i] > magMax[i])
+				magMax[i] = magMeanValues[i];
+			if(magMeanValues[i] < magMin[i])
+				magMin[i] = magMeanValues[i];
 
-	// Calculate basic angles
-	calculate_angles(radAngleValues, acclMeanValues);
-	radAngleValues[2] = yaw_fromMag(magMeanValues);
+			magCalib[i] = (magMax[i] + magMin[i]) * 0.5;
+		}
 
-	// Convert to degrees
-	degAngleValues[0] = rad2deg(radAngleValues[0]);
-	degAngleValues[1] = rad2deg(radAngleValues[1]);
-	degAngleValues[2] = rad2deg(radAngleValues[2]) - initialYaw;
-
-
-	complementaryFilter( &filteredRollAngle, gyroAngles[0]-previousGyroAngles[0], degAngleValues[0]);
-	complementaryFilter(&filteredPitchAngle, gyroAngles[1]-previousGyroAngles[1], degAngleValues[1]);
-
-	// X - Pitch
-	outputData[0] = linInterpolation(filteredRollAngle, 5.0, 45.0, 0, 100);
-	// Y - Roll
-	outputData[1] = linInterpolation(filteredPitchAngle, 5.0, 45.0, 0, 100);
-	// Z - Yaw
-	outputData[2] = linInterpolation(degAngleValues[2], 5.0, 30.0, 0, 100);
-
-	if (upState)
-		height = 100;
-	else if (downState)
-		height = -100;
+		if (upState == 0 && downState == 0)
+		{
+			LIS3MDL_getInitialMag(magInitialValues);
+			magCorrectedValues[0] =   magInitialValues[1]*cos(radAngleValues[1])+magInitialValues[2]*sin(radAngleValues[1]) ;
+			magCorrectedValues[1] = -(magInitialValues[0]*cos(radAngleValues[0])+magInitialValues[2]*sin(radAngleValues[0]));
+			initialYaw = rad2deg(yaw_fromMag(magCorrectedValues))+90;
+			magnetCalibration = 0;
+		}
+		USART2_send_data("CALIB",0,0,0,0);
+	}
 	else
-		height = 0;
-
-	switch(command)
 	{
-		case FRONTFLIP: strcpy((char *)commandChar, "FRONTFLIP"); break;
-		case BACKFLIP:  strcpy((char *)commandChar, "BACKFLIP");  break;
-		case RIGHTFLIP: strcpy((char *)commandChar, "RIGHTFLIP"); break;
-		case LEFTFLIP:  strcpy((char *)commandChar, "LEFTFLIP");  break;
-		default: 		strcpy((char *)commandChar, "NONE"); break;
+		char commandChar[10] = "NONE";
+
+		// Calculate ROLL, PITCH
+		calculate_angles(radAngleValues, acclMeanValues);
+
+		// Correct magnetometer data
+		magCorrectedValues[0] =   magMeanValues[1]*cos(radAngleValues[1])+magMeanValues[2]*sin(radAngleValues[1]) ;
+		magCorrectedValues[1] = -(magMeanValues[0]*cos(radAngleValues[0])+magMeanValues[2]*sin(radAngleValues[0]));
+
+		// Calculate YAW
+		radAngleValues[2] = yaw_fromMag(magCorrectedValues);
+
+		// Convert to degrees
+		degAngleValues[0] = rad2deg(radAngleValues[0]);
+		degAngleValues[1] = rad2deg(radAngleValues[1]);
+		degAngleValues[2] = rad2deg(radAngleValues[2]) - initialYaw;
+
+		complementaryFilter( &filteredRollAngle, gyroAngles[0]-previousGyroAngles[0], degAngleValues[0]);
+		complementaryFilter(&filteredPitchAngle, gyroAngles[1]-previousGyroAngles[1], degAngleValues[1]);
+		complementaryFilter(  &filteredYawAngle, gyroAngles[2]-previousGyroAngles[2], degAngleValues[2]);
+
+		// X - Pitch
+		outputData[0] = linInterpolation(filteredRollAngle, 5.0, 45.0, 0, 100);
+		// Y - Roll
+		outputData[1] = linInterpolation(filteredPitchAngle, 5.0, 45.0, 0, 100);
+		// Z - Yaw
+		outputData[2] = linInterpolation(degAngleValues[2], 5.0, 30.0, 0, 100);
+
+		if (upState && downState)
+		{
+			magnetCalibration = 1;
+			for(int i = 0; i<3; i++)
+			{
+				magMax[i] = magMeanValues[i];
+				magMin[i] = magMeanValues[i];
+			}
+		}
+		else if (upState)
+			height = 100;
+		else if (downState)
+			height = -100;
+		else
+			height = 0;
+
+		switch(command)
+		{
+			case FRONTFLIP: strcpy((char *)commandChar, "FRONTFLIP"); break;
+			case BACKFLIP:  strcpy((char *)commandChar, "BACKFLIP");  break;
+			case RIGHTFLIP: strcpy((char *)commandChar, "RIGHTFLIP"); break;
+			case LEFTFLIP:  strcpy((char *)commandChar, "LEFTFLIP");  break;
+			default: 		strcpy((char *)commandChar, "NONE"); break;
+		}
+
+		if(command != NOFLIP && commandCounter == 0)
+		{
+			command = NOFLIP;
+			commandCounter = 8;
+		}
+		if(commandCounter > 0)
+			commandCounter--;
+
+		// Send Data (int8_t)outputData[2]
+		USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, (int8_t)outputData[2]*-1, (int8_t)height);
+		//USART2_send_debug_data(magMeanValues[0], magMeanValues[1], magMeanValues[2]);
+
+		// Remember Gyro angles
+		previousGyroAngles[0] = gyroAngles[0];
+		previousGyroAngles[1] = gyroAngles[1];
+		previousGyroAngles[2] = gyroAngles[2];
 	}
-
-	if(command != NOFLIP && commandCounter == 0)
-	{
-		command = NOFLIP;
-		commandCounter = 8;
-	}
-	if(commandCounter > 0)
-		commandCounter--;
-
-	// Send Data
-	USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, (int8_t)outputData[2], (int8_t)height);
-
-	// Remember Gyro angles
-	previousGyroAngles[0] = gyroAngles[0];
-	previousGyroAngles[1] = gyroAngles[1];
-	previousGyroAngles[2] = gyroAngles[2];
 }
 
 /**
