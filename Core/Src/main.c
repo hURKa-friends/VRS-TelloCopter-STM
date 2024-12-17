@@ -83,6 +83,9 @@ uint8_t downCurrButtonState;
 uint8_t downPrevButtonState;
 uint8_t downState;
 
+flip_state command = NOFLIP;
+uint8_t commandCounter = 0;
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -180,6 +183,9 @@ void TIM2_IRQ_main(void)
 	}
 	downPrevButtonState = downCurrButtonState;
 
+	if(command == NOFLIP)
+		command = flipSensor(gyroMeanValues);
+
 	dataCounter++;
 	if(dataCounter >= MAX_DATA_BUFFER)
 		dataCounter = 0;
@@ -194,6 +200,8 @@ void TIM2_IRQ_main(void)
   */
 void TIM3_IRQ_main(void)
 {
+	char commandChar[10] = "NONE";
+
 	calculate_angles(radAngleValues, acclMeanValues);
 	radAngleValues[2] = yaw_fromMag(magMeanValues);
 
@@ -202,11 +210,12 @@ void TIM3_IRQ_main(void)
 
 	degAngleValues[2] = rad2deg(radAngleValues[2]) - initialYaw;
   
-//	radPitch = recalculate_angles(radAngleValues[1], gyroMeanValues[0], anglePitch);
-//	radRoll = recalculate_angles(-radAngleValues[0], gyroMeanValues[1], angleRoll);
-//
-//	anglePitch = rad2deg(radPitch);
-//	angleRoll = rad2deg(radRoll);
+	radPitch = recalculate_angles(radAngleValues[1], gyroMeanValues[0], anglePitch);
+	radRoll = recalculate_angles(-radAngleValues[0], gyroMeanValues[1], angleRoll);
+
+	anglePitch = rad2deg(radPitch);
+	angleRoll = rad2deg(radRoll);
+
 	// X - Pitch
 	outputData[0] = linInterpolation(degAngleValues[0], 5.0, 45.0, 0, 100);
 	// Y - Roll
@@ -221,8 +230,25 @@ void TIM3_IRQ_main(void)
 	else
 		height = 0;
 
+	switch(command)
+	{
+		case FRONTFLIP: strcpy((char *)commandChar, "FRONTFLIP"); break;
+		case BACKFLIP:  strcpy((char *)commandChar, "BACKFLIP");  break;
+		case RIGHTFLIP: strcpy((char *)commandChar, "RIGHTFLIP"); break;
+		case LEFTFLIP:  strcpy((char *)commandChar, "LEFTFLIP");  break;
+		default: 		strcpy((char *)commandChar, "NONE"); break;
+	}
+
+	if(command != NOFLIP && commandCounter == 0)
+	{
+		command = NOFLIP;
+		commandCounter = 8;
+	}
+	if(commandCounter > 0)
+		commandCounter--;
+
 	// Send Data
-	USART2_send_data("NONE", (int8_t)outputData[0]*-1, (int8_t)outputData[1]*-1, (int8_t)outputData[2]*-1, (int8_t)height);
+	USART2_send_data(commandChar, (int8_t)outputData[0]*-1, (int8_t)outputData[1]*-1, (int8_t)outputData[2]*-1, (int8_t)height);
 }
 
 /**

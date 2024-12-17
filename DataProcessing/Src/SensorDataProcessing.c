@@ -61,13 +61,13 @@ float linInterpolation(float input, float inputLimLow, float inputLimHigh, float
 }
 
 flip_state flipSensor(float gyroData[]) {
-	if(gyroData[0] > 280) {
+	if(gyroData[0] > 270) {
 		return FRONTFLIP;
-	} else if(gyroData[0] < -280){
+	} else if(gyroData[0] < -270){
 		return BACKFLIP;
-	} else if(gyroData[1] > 280) {
+	} else if(gyroData[1] > 270) {
 		return RIGHTFLIP;
-	} else if(gyroData[1] < -280) {
+	} else if(gyroData[1] < -270) {
 		return LEFTFLIP;
 	} else {
 		return NOFLIP;
