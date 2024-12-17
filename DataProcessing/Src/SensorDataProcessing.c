@@ -12,7 +12,7 @@ void calculate_angles(float currentAngles[], float acclData[])
 {
     //currentAngles[0] =  atan2(acclData[0] , sqrt((acclData[1]*acclData[1])+(acclData[2]*acclData[2])));
     //currentAngles[1] =  atan2(acclData[1] , sqrt((acclData[0]*acclData[0])+(acclData[2]*acclData[2])));
-    currentAngles[0] =  atan2(acclData[0], acclData[2]);
+    currentAngles[0] =  -atan2(acclData[0], acclData[2]);
 	currentAngles[1] =  atan2(acclData[1], acclData[2]);
     //currentAngles[2] =  atan2(sqrt((acclData[0]*acclData[0])+(acclData[1]*acclData[1]))/acclData[2]);
 }
@@ -79,7 +79,11 @@ float rad2deg(float rad)
 	return (rad / M_PI) * 180.0;
 }
 
-float recalculate_angles(float radFromAccel, float gyroscope, float lastAng) {
-	float angle = (gyro_favoring) * (lastAng + (gyroscope * 8.333e-3)) + (1.00 - gyro_favoring) * (radFromAccel);
-	return angle;
+void complementaryFilter(float* complementaryAngle, float gyroAngleChange, float acclAngle)
+{
+	float acclWeight = 0.01;
+	float gyroWeight = 1-acclWeight;
+	float wAcclAngle = acclAngle * acclWeight;
+	float wGyroAngle = (*complementaryAngle + gyroAngleChange) * gyroWeight;
+	*complementaryAngle = wAcclAngle + wGyroAngle;
 }

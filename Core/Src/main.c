@@ -40,33 +40,41 @@
 /* USER CODE BEGIN PD */
 #define MAX_DATA_BUFFER		8
 uint8_t dataCounter = 0;
-uint8_t upStatus = 0;
-uint8_t downStatus = 0;
+
+// Raw data
 float gyroX[MAX_DATA_BUFFER];
 float gyroY[MAX_DATA_BUFFER];
 float gyroZ[MAX_DATA_BUFFER];
+float gyroCalib[3];
+
 float acclX[MAX_DATA_BUFFER];
 float acclY[MAX_DATA_BUFFER];
 float acclZ[MAX_DATA_BUFFER];
+
 float magX[MAX_DATA_BUFFER];
 float magY[MAX_DATA_BUFFER];
 float magZ[MAX_DATA_BUFFER];
-float gyroMeanValues[3];
-float gyroAngles[3];
-float gyroCalib[3];
-float acclMeanValues[3];
-float magMeanValues[3];
 float magInitialValues[3];
 float initialYaw;
+
+// Processed data
+float gyroMeanValues[3];
+float acclMeanValues[3];
+float magMeanValues[3];
+
+// Angle data
+float previousGyroAngles[3];
+float gyroAngles[3];
 float radAngleValues[3];
 float degAngleValues[3];
-float outputData[3];
-float height = 0;
-float anglePitch = 0;
-float angleRoll = 0;
-float radPitch = 0;
-float radRoll = 0;
 
+float filteredRollAngle = 0;
+float filteredPitchAngle = 0;
+
+float outputData[3];
+
+// Height control
+float height = 0;
 // GPIO UP
 EDGE_TYPE upDetectedEdgeType;
 EDGE_TYPE upButtonEdgeType;
@@ -83,6 +91,7 @@ uint8_t downCurrButtonState;
 uint8_t downPrevButtonState;
 uint8_t downState;
 
+// Commands
 flip_state command = NOFLIP;
 uint8_t commandCounter = 0;
 
@@ -115,6 +124,7 @@ void SystemClock_Config(void);
   */
 void TIM2_IRQ_main(void)
 {
+	// Read RAW data
 	int16_t rawGyroX, rawGyroY, rawGyroZ;
 	int16_t rawAcclX, rawAcclY, rawAcclZ;
 	int16_t rawMagX, rawMagY, rawMagZ;
@@ -123,19 +133,10 @@ void TIM2_IRQ_main(void)
 	LSM6DS0_get_accl(&rawAcclX, &rawAcclY, &rawAcclZ);
 	LIS3MDL_get_mag(&rawMagX, &rawMagY, &rawMagZ);
 
+	// Parse data to usable dimensions
 	gyroX[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroX) - gyroCalib[0];
 	gyroY[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroY) - gyroCalib[1];
 	gyroZ[dataCounter] = LSM6DS0_parse_gyro_data(rawGyroZ) - gyroCalib[2];
-
-	if (fabs(gyroX[dataCounter]) > 0.3) {
-		gyroAngles[0] += gyroX[dataCounter] * 8.333e-3;
-	}
-	if (fabs(gyroY[dataCounter]) > 0.3) {
-		gyroAngles[1] += gyroY[dataCounter] * 8.333e-3;
-	}
-	if (fabs(gyroZ[dataCounter]) > 0.3) {
-		gyroAngles[2] += gyroZ[dataCounter] * 8.333e-3;
-	}
 
 	acclX[dataCounter] = LSM6DS0_parse_accl_data(rawAcclX);
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
@@ -145,17 +146,23 @@ void TIM2_IRQ_main(void)
 	magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);// - magInitialValues[1];
 	magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);// - magInitialValues[2];
 
-	gyroMeanValues[0] = movingAvgFilter((float *)gyroX, MAX_DATA_BUFFER);
-	gyroMeanValues[1] = movingAvgFilter((float *)gyroY, MAX_DATA_BUFFER);
-	gyroMeanValues[2] = movingAvgFilter((float *)gyroZ, MAX_DATA_BUFFER);
-
+	// Process data
 	acclMeanValues[0] = movingAvgFilter((float *)acclX, MAX_DATA_BUFFER);
 	acclMeanValues[1] = movingAvgFilter((float *)acclY, MAX_DATA_BUFFER);
 	acclMeanValues[2] = movingAvgFilter((float *)acclZ, MAX_DATA_BUFFER);
 
+	gyroMeanValues[0] = movingAvgFilter((float *)gyroX, MAX_DATA_BUFFER);
+	gyroMeanValues[1] = movingAvgFilter((float *)gyroY, MAX_DATA_BUFFER);
+	gyroMeanValues[2] = movingAvgFilter((float *)gyroZ, MAX_DATA_BUFFER);
+
 	magMeanValues[0] = movingAvgFilter((float *)magX, MAX_DATA_BUFFER);
 	magMeanValues[1] = movingAvgFilter((float *)magY, MAX_DATA_BUFFER);
 	magMeanValues[2] = movingAvgFilter((float *)magZ, MAX_DATA_BUFFER);
+
+	// Gyro Integration
+	gyroAngles[0] += gyroY[dataCounter] * 8.333e-3;
+	gyroAngles[1] += gyroX[dataCounter] * 8.333e-3;
+	gyroAngles[2] += gyroZ[dataCounter] * 8.333e-3;
 
 	// UP logic
 	upCurrButtonState = LL_GPIO_IsInputPinSet(GPIOB, UP_SWITCH_Pin);
@@ -183,6 +190,7 @@ void TIM2_IRQ_main(void)
 	}
 	downPrevButtonState = downCurrButtonState;
 
+	// Command Detection
 	if(command == NOFLIP)
 		command = flipSensor(gyroMeanValues);
 
@@ -202,24 +210,23 @@ void TIM3_IRQ_main(void)
 {
 	char commandChar[10] = "NONE";
 
+	// Calculate basic angles
 	calculate_angles(radAngleValues, acclMeanValues);
 	radAngleValues[2] = yaw_fromMag(magMeanValues);
 
-	for(int i = 0; i < 2; i++)
-		degAngleValues[i] = rad2deg(radAngleValues[i]);
-
+	// Convert to degrees
+	degAngleValues[0] = rad2deg(radAngleValues[0]);
+	degAngleValues[1] = rad2deg(radAngleValues[1]);
 	degAngleValues[2] = rad2deg(radAngleValues[2]) - initialYaw;
-  
-	radPitch = recalculate_angles(radAngleValues[1], gyroMeanValues[0], anglePitch);
-	radRoll = recalculate_angles(-radAngleValues[0], gyroMeanValues[1], angleRoll);
 
-	anglePitch = rad2deg(radPitch);
-	angleRoll = rad2deg(radRoll);
+
+	complementaryFilter( &filteredRollAngle, gyroAngles[0]-previousGyroAngles[0], degAngleValues[0]);
+	complementaryFilter(&filteredPitchAngle, gyroAngles[1]-previousGyroAngles[1], degAngleValues[1]);
 
 	// X - Pitch
-	outputData[0] = linInterpolation(degAngleValues[0], 5.0, 45.0, 0, 100);
+	outputData[0] = linInterpolation(filteredRollAngle, 5.0, 45.0, 0, 100);
 	// Y - Roll
-	outputData[1] = linInterpolation(degAngleValues[1], 5.0, 45.0, 0, 100);
+	outputData[1] = linInterpolation(filteredPitchAngle, 5.0, 45.0, 0, 100);
 	// Z - Yaw
 	outputData[2] = linInterpolation(degAngleValues[2], 5.0, 30.0, 0, 100);
 
@@ -248,7 +255,12 @@ void TIM3_IRQ_main(void)
 		commandCounter--;
 
 	// Send Data
-	USART2_send_data(commandChar, (int8_t)outputData[0]*-1, (int8_t)outputData[1]*-1, (int8_t)outputData[2]*-1, (int8_t)height);
+	USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, (int8_t)outputData[2], (int8_t)height);
+
+	// Remember Gyro angles
+	previousGyroAngles[0] = gyroAngles[0];
+	previousGyroAngles[1] = gyroAngles[1];
+	previousGyroAngles[2] = gyroAngles[2];
 }
 
 /**
@@ -306,22 +318,10 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  for (int i = 0; i < MAX_DATA_BUFFER; i++)
-  {
-	gyroX[dataCounter] = 0;
-	gyroY[dataCounter] = 0;
-	gyroZ[dataCounter] = 0;
-  }
-
   LSM6DS0_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
   LIS3MDL_init(I2C1_MultiByteRead, I2C1_MultiByteWrite);
 
-  gyroAngles[0] = 0;
-  gyroAngles[1] = 0;
-  gyroAngles[2] = 0;
-
   LSM6DS0_get_gyro_calib(gyroCalib);
-
   LIS3MDL_getInitialMag(magInitialValues);
   initialYaw = rad2deg(yaw_fromMag(magInitialValues));
 

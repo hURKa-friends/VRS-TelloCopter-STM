@@ -41,7 +41,8 @@ static uint8_t (* I2C_WriteData)(uint8_t slave_address, uint8_t register_address
   */
 uint8_t LSM6DS0_read_byte(uint8_t register_address)
 {
-	uint8_t i2cState = 0, byte = 0;
+	uint8_t	byte = 0;
+	uint8_t i2cState = 0;
 	i2cState = I2C_ReadData(LSM6DS0_DEVICE_ADDRESS, register_address, &byte, 1);
 	if(i2cState != 0)
 		LSM6DS0_deviceState = LSM6DS0_I2C_ERROR;
