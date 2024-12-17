@@ -10,6 +10,8 @@
 
 #include "main.h"
 
+#define gyro_favoring			0.98
+
 void calculate_angles(float currentAngles[], float acclData[]);
 
 float movingAvgFilter(float* array, uint8_t sampleCount);
@@ -19,6 +21,8 @@ float linInterpolation(float input, float inputLimLow, float inputLimHigh, float
 float rad2deg(float rad);
 
 float yaw_fromMag(float magData[]);
+
+float recalculate_angles(float radFromAccel, float gyroscope, float lastAng);
 
 typedef enum {
 	FRONTFLIP = 0x00U,

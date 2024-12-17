@@ -78,3 +78,8 @@ float rad2deg(float rad)
 {
 	return (rad / M_PI) * 180.0;
 }
+
+float recalculate_angles(float radFromAccel, float gyroscope, float lastAng) {
+	float angle = (gyro_favoring) * (lastAng + (gyroscope * 8.333e-3)) + (1.00 - gyro_favoring) * (radFromAccel);
+	return angle;
+}
