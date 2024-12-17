@@ -62,6 +62,10 @@ float radAngleValues[3];
 float degAngleValues[3];
 float outputData[3];
 float height = 0;
+float anglePitch = 0;
+float angleRoll = 0;
+float radPitch = 0;
+float radRoll = 0;
 
 // GPIO UP
 EDGE_TYPE upDetectedEdgeType;
@@ -137,9 +141,9 @@ void TIM2_IRQ_main(void)
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
 	acclZ[dataCounter] = LSM6DS0_parse_accl_data(rawAcclZ);
 
-	magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);
-	magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);
-	magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);
+	magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);// - magInitialValues[0];
+	magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);// - magInitialValues[1];
+	magZ[dataCounter] = LIS3MDL_parse_mag_data(rawMagZ);// - magInitialValues[2];
 
 	gyroMeanValues[0] = movingAvgFilter((float *)gyroX, MAX_DATA_BUFFER);
 	gyroMeanValues[1] = movingAvgFilter((float *)gyroY, MAX_DATA_BUFFER);
@@ -206,6 +210,12 @@ void TIM3_IRQ_main(void)
 
 	degAngleValues[2] = rad2deg(radAngleValues[2]) - initialYaw;
   
+	radPitch = recalculate_angles(radAngleValues[1], gyroMeanValues[0], anglePitch);
+	radRoll = recalculate_angles(-radAngleValues[0], gyroMeanValues[1], angleRoll);
+
+	anglePitch = rad2deg(radPitch);
+	angleRoll = rad2deg(radRoll);
+
 	// X - Pitch
 	outputData[0] = linInterpolation(degAngleValues[0], 5.0, 45.0, 0, 100);
 	// Y - Roll
