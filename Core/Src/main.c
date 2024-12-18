@@ -239,9 +239,16 @@ void TIM3_IRQ_main(void)
 		if (upState == 0 && downState == 0)
 		{
 			LIS3MDL_getInitialMag(magInitialValues);
-			magCorrectedValues[0] =   magInitialValues[1]*cos(radAngleValues[1])+magInitialValues[2]*sin(radAngleValues[1]) ;
-			magCorrectedValues[1] = -(magInitialValues[0]*cos(radAngleValues[0])+magInitialValues[2]*sin(radAngleValues[0]));
-			initialYaw = rad2deg(yaw_fromMag(magCorrectedValues))+90;
+			magInitialValues[0] -= magCalib[0];
+			magInitialValues[1] -= magCalib[1];
+			magInitialValues[2] -= magCalib[2];
+
+			// Correct magnetometer data
+			magCorrectedValues[0] =   magInitialValues[1]*cos(radAngleValues[0])+magInitialValues[2]*sin(radAngleValues[0]) ;
+			magCorrectedValues[1] = -(magInitialValues[0]*cos(radAngleValues[1])+magInitialValues[2]*sin(radAngleValues[1]));
+			magCorrectedValues[2] =   magInitialValues[0]*sin(radAngleValues[1])+magInitialValues[2]*cos(radAngleValues[1]) +
+									  magInitialValues[1]*sin(radAngleValues[0])+magInitialValues[2]*cos(radAngleValues[0]) ;
+			initialYaw = rad2deg(yaw_fromMag(magCorrectedValues));
 			magnetCalibration = 0;
 		}
 		USART2_send_data("CALIB",0,0,0,0);
@@ -254,8 +261,10 @@ void TIM3_IRQ_main(void)
 		calculate_angles(radAngleValues, acclMeanValues);
 
 		// Correct magnetometer data
-		magCorrectedValues[0] =   magMeanValues[1]*cos(radAngleValues[1])+magMeanValues[2]*sin(radAngleValues[1]) ;
-		magCorrectedValues[1] = -(magMeanValues[0]*cos(radAngleValues[0])+magMeanValues[2]*sin(radAngleValues[0]));
+		magCorrectedValues[0] =   magMeanValues[1]*cos(radAngleValues[0])+magMeanValues[2]*sin(radAngleValues[0]) ;
+		magCorrectedValues[1] = -(magMeanValues[0]*cos(radAngleValues[1])+magMeanValues[2]*sin(radAngleValues[1]));
+		magCorrectedValues[2] =   magMeanValues[0]*sin(radAngleValues[1])+magMeanValues[2]*cos(radAngleValues[1]) +
+				                  magMeanValues[1]*sin(radAngleValues[0])+magMeanValues[2]*cos(radAngleValues[0]) ;
 
 		// Calculate YAW
 		radAngleValues[2] = yaw_fromMag(magCorrectedValues);
@@ -309,8 +318,8 @@ void TIM3_IRQ_main(void)
 		if(commandCounter > 0)
 			commandCounter--;
 
-		// Send Data (int8_t)outputData[2]
-		USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, (int8_t)outputData[2]*-1, (int8_t)height);
+		// Send Data (int8_t)outputData[2]*-1
+		USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, degAngleValues[2], (int8_t)height);
 		//USART2_send_debug_data(magMeanValues[0], magMeanValues[1], magMeanValues[2]);
 
 		// Remember Gyro angles

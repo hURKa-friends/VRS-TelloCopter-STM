@@ -19,7 +19,7 @@ void calculate_angles(float currentAngles[], float acclData[])
 
 float yaw_fromMag(float magData[])
 {
-    return atan2(magData[1], magData[0]);
+    return atan2(magData[0], magData[1]);
 }
 
 float movingAvgFilter(float* array, uint8_t sampleCount)
