@@ -72,7 +72,9 @@ float previousGyroAngles[3];
 float gyroAngles[3];
 float radAngleValues[3];
 float degAngleValues[3];
+float lastYaw;
 float magCorrectedValues[3];
+float lastMagCorrectedValues[3];
 
 float filteredRollAngle = 0;
 float filteredPitchAngle = 0;
@@ -248,8 +250,12 @@ void TIM3_IRQ_main(void)
 			magCorrectedValues[1] = -(magInitialValues[0]*cos(radAngleValues[1])+magInitialValues[2]*sin(radAngleValues[1]));
 			magCorrectedValues[2] =   magInitialValues[0]*sin(radAngleValues[1])+magInitialValues[2]*cos(radAngleValues[1]) +
 									  magInitialValues[1]*sin(radAngleValues[0])+magInitialValues[2]*cos(radAngleValues[0]) ;
-			initialYaw = rad2deg(yaw_fromMag(magCorrectedValues));
+			float yaw_in_rad = atan2(magCorrectedValues[0], magCorrectedValues[1]);//yaw_fromMag(magCorrectedValues, lastYaw);
+			initialYaw = rad2deg(yaw_in_rad);
+			lastYaw = yaw_in_rad;
 			magnetCalibration = 0;
+
+			//memcpy(lastMagCorrectedValues, magCorrectedValues, sizeof(magCorrectedValues));
 		}
 		USART2_send_data("CALIB",0,0,0,0);
 	}
@@ -267,7 +273,9 @@ void TIM3_IRQ_main(void)
 				                  magMeanValues[1]*sin(radAngleValues[0])+magMeanValues[2]*cos(radAngleValues[0]) ;
 
 		// Calculate YAW
-		radAngleValues[2] = yaw_fromMag(magCorrectedValues);
+		radAngleValues[2] = yaw_fromMag(magCorrectedValues, lastYaw);
+		lastYaw = radAngleValues[2];
+		//memcpy(lastMagCorrectedValues, magCorrectedValues, sizeof(magCorrectedValues));
 
 		// Convert to degrees
 		degAngleValues[0] = rad2deg(radAngleValues[0]);
@@ -389,7 +397,10 @@ int main(void)
 
   LSM6DS0_get_gyro_calib(gyroCalib);
   LIS3MDL_getInitialMag(magInitialValues);
-  initialYaw = rad2deg(yaw_fromMag(magInitialValues));
+  //memcpy(lastMagCorrectedValues, magInitialValues, sizeof(magInitialValues));
+  initialYaw = rad2deg(yaw_fromMag(magInitialValues, lastYaw));
+  lastYaw = initialYaw;
+  //memcpy(lastMagCorrectedValues, magCorrectedValues, sizeof(magCorrectedValues));
 
   TIM2_RegisterCallback(TIM2_IRQ_main);
   TIM3_RegisterCallback(TIM3_IRQ_main);

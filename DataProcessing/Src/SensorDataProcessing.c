@@ -17,9 +17,35 @@ void calculate_angles(float currentAngles[], float acclData[])
     //currentAngles[2] =  atan2(sqrt((acclData[0]*acclData[0])+(acclData[1]*acclData[1]))/acclData[2]);
 }
 
-float yaw_fromMag(float magData[])
+float yaw_fromMag(float magData[], float lastAngle)
 {
-    return atan2(magData[0], magData[1]);
+	float angle = atan2(magData[0], magData[1]);
+	//float lastAngle = atan2(lastMagData[0], lastMagData[1]);
+	float newAngle;
+
+	/*if (lastMagData[0] < 0 && lastMagData[1] > 0 && magData[1] < 0 && magData[0] < 0) {
+		newAngle = angle + 2 * M_PI;
+	}
+	else if (lastMagData[0] < 0 && lastMagData[1] < 0 && magData[1] > 0 && magData[0] < 0) {
+		newAngle = angle - 2 * M_PI;
+	}*/
+	/*if (lastAngle > (M_PI / 2) && angle < 0) {
+		newAngle = angle + 2 * M_PI;
+	}
+	else if (lastAngle < -(M_PI / 2) && angle > 0) {
+		newAngle = angle - 2 * M_PI;
+	}*/
+	if (angle < (lastAngle - M_PI)) {
+		newAngle = angle + 2 * M_PI;
+	}
+	else if (angle > (lastAngle + M_PI)) {
+		newAngle = angle - 2 * M_PI;
+	}
+	else {
+		newAngle = angle;
+	}
+
+    return newAngle;
 }
 
 float movingAvgFilter(float* array, uint8_t sampleCount)
