@@ -208,9 +208,12 @@ void TIM2_IRQ_main(void)
 	}
 	downPrevButtonState = downCurrButtonState;
 
-	// Command Detection
-	if(command == NOFLIP)
-		command = flipSensor(gyroMeanValues);
+	if(magnetCalibration == 0)
+	{
+		// Command Detection
+		if(command == NOFLIP)
+			command = flipSensor(gyroMeanValues);
+	}
 
 	dataCounter++;
 	if(dataCounter >= MAX_DATA_BUFFER)
@@ -250,9 +253,19 @@ void TIM3_IRQ_main(void)
 			magCorrectedValues[1] = -(magInitialValues[0]*cos(radAngleValues[1])+magInitialValues[2]*sin(radAngleValues[1]));
 			magCorrectedValues[2] =   magInitialValues[0]*sin(radAngleValues[1])+magInitialValues[2]*cos(radAngleValues[1]) +
 									  magInitialValues[1]*sin(radAngleValues[0])+magInitialValues[2]*cos(radAngleValues[0]) ;
-			float yaw_in_rad = atan2(magCorrectedValues[0], magCorrectedValues[1]);//yaw_fromMag(magCorrectedValues, lastYaw);
+			float yaw_in_rad = atan2(magCorrectedValues[0], magCorrectedValues[1]); //yaw_fromMag(magCorrectedValues, lastYaw);
 			initialYaw = rad2deg(yaw_in_rad);
 			lastYaw = yaw_in_rad;
+			degAngleValues[2] = initialYaw;
+			for (int i = 0; i<3; i++)
+			{
+				gyroAngles[i] = degAngleValues[i];
+			    previousGyroAngles[i] = degAngleValues[i];
+			    gyroMeanValues[i] = 0;
+			}
+			filteredRollAngle = 0;
+			filteredPitchAngle = 0;
+			filteredYawAngle = 0;
 			magnetCalibration = 0;
 
 			//memcpy(lastMagCorrectedValues, magCorrectedValues, sizeof(magCorrectedValues));
@@ -291,7 +304,7 @@ void TIM3_IRQ_main(void)
 		// Y - Roll
 		outputData[1] = linInterpolation(filteredPitchAngle, 5.0, 45.0, 0, 100);
 		// Z - Yaw
-		outputData[2] = linInterpolation(degAngleValues[2], 5.0, 30.0, 0, 100);
+		outputData[2] = linInterpolation(filteredYawAngle, 5.0, 30.0, 0, 100);
 
 		if (upState && downState)
 		{
@@ -327,8 +340,8 @@ void TIM3_IRQ_main(void)
 			commandCounter--;
 
 		// Send Data (int8_t)outputData[2]*-1
-		USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, degAngleValues[2], (int8_t)height);
-		//USART2_send_debug_data(magMeanValues[0], magMeanValues[1], magMeanValues[2]);
+		USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, (int8_t)outputData[2], (int8_t)height);
+		//USART2_send_debug_data(degAngleValues[0], degAngleValues[1], degAngleValues[2]);
 
 		// Remember Gyro angles
 		previousGyroAngles[0] = gyroAngles[0];
