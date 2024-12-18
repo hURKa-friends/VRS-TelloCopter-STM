@@ -57,10 +57,12 @@ float magY[MAX_DATA_BUFFER];
 float magZ[MAX_DATA_BUFFER];
 float magInitialValues[3];
 uint8_t magnetCalibration = 0;
+uint8_t yawCalibration = 0;
 float magMax[3];
 float magMin[3];
 float magCalib[3];
 float initialYaw;
+uint8_t initialYawData = 50;
 
 // Processed data
 float gyroMeanValues[3];
@@ -151,7 +153,7 @@ void TIM2_IRQ_main(void)
 	acclY[dataCounter] = LSM6DS0_parse_accl_data(rawAcclY);
 	acclZ[dataCounter] = LSM6DS0_parse_accl_data(rawAcclZ);
 
-	if(magnetCalibration)
+	if(magnetCalibration && yawCalibration == 0)
 	{
 		magX[dataCounter] = LIS3MDL_parse_mag_data(rawMagX);// - magInitialValues[0];
 		magY[dataCounter] = LIS3MDL_parse_mag_data(rawMagY);// - magInitialValues[1];
@@ -218,6 +220,9 @@ void TIM2_IRQ_main(void)
 	dataCounter++;
 	if(dataCounter >= MAX_DATA_BUFFER)
 		dataCounter = 0;
+
+	if(initialYawData > 0)
+		initialYawData--;
 }
 
 
@@ -231,32 +236,33 @@ void TIM3_IRQ_main(void)
 {
 	if(magnetCalibration)
 	{
-		for(int i = 0; i<3; i++)
+		if (upState == 1 && downState == 1)
 		{
-			if(magMeanValues[i] > magMax[i])
-				magMax[i] = magMeanValues[i];
-			if(magMeanValues[i] < magMin[i])
-				magMin[i] = magMeanValues[i];
+			for(int i = 0; i<3; i++)
+			{
+				if(magMeanValues[i] > magMax[i])
+					magMax[i] = magMeanValues[i];
+				if(magMeanValues[i] < magMin[i])
+					magMin[i] = magMeanValues[i];
 
-			magCalib[i] = (magMax[i] + magMin[i]) * 0.5;
+				magCalib[i] = (magMax[i] + magMin[i]) * 0.5;
+			}
 		}
 
 		if (upState == 0 && downState == 0)
 		{
-			LIS3MDL_getInitialMag(magInitialValues);
-			magInitialValues[0] -= magCalib[0];
-			magInitialValues[1] -= magCalib[1];
-			magInitialValues[2] -= magCalib[2];
+			yawCalibration = 1;
+			while(initialYawData != 0)
+				;
 
 			// Correct magnetometer data
-			magCorrectedValues[0] =   magInitialValues[1]*cos(radAngleValues[0])+magInitialValues[2]*sin(radAngleValues[0]) ;
-			magCorrectedValues[1] = -(magInitialValues[0]*cos(radAngleValues[1])+magInitialValues[2]*sin(radAngleValues[1]));
-			magCorrectedValues[2] =   magInitialValues[0]*sin(radAngleValues[1])+magInitialValues[2]*cos(radAngleValues[1]) +
-									  magInitialValues[1]*sin(radAngleValues[0])+magInitialValues[2]*cos(radAngleValues[0]) ;
-			float yaw_in_rad = atan2(magCorrectedValues[0], magCorrectedValues[1]); //yaw_fromMag(magCorrectedValues, lastYaw);
+			magCorrectedValues[0] =   magMeanValues[1]*cos(radAngleValues[0])+magMeanValues[2]*sin(radAngleValues[0]) ;
+			magCorrectedValues[1] = -(magMeanValues[0]*cos(radAngleValues[1])+magMeanValues[2]*sin(radAngleValues[1]));
+			magCorrectedValues[2] =   magMeanValues[0]*sin(radAngleValues[1])+magMeanValues[2]*cos(radAngleValues[1]) +
+					                  magMeanValues[1]*sin(radAngleValues[0])+magMeanValues[2]*cos(radAngleValues[0]) ;
+			float yaw_in_rad = yaw_fromMag(magCorrectedValues, 0);
 			initialYaw = rad2deg(yaw_in_rad);
 			lastYaw = yaw_in_rad;
-			degAngleValues[2] = initialYaw;
 			for (int i = 0; i<3; i++)
 			{
 				gyroAngles[i] = degAngleValues[i];
@@ -309,6 +315,7 @@ void TIM3_IRQ_main(void)
 		if (upState && downState)
 		{
 			magnetCalibration = 1;
+			initialYawData = 50;
 			for(int i = 0; i<3; i++)
 			{
 				magMax[i] = magMeanValues[i];
@@ -334,13 +341,13 @@ void TIM3_IRQ_main(void)
 		if(command != NOFLIP && commandCounter == 0)
 		{
 			command = NOFLIP;
-			commandCounter = 8;
+			commandCounter = 1;
 		}
 		if(commandCounter > 0)
 			commandCounter--;
 
 		// Send Data (int8_t)outputData[2]*-1
-		USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, (int8_t)outputData[2], (int8_t)height);
+		USART2_send_data(commandChar, (int8_t)outputData[0], (int8_t)outputData[1]*-1, (int8_t)outputData[2]*-1, (int8_t)height);
 		//USART2_send_debug_data(degAngleValues[0], degAngleValues[1], degAngleValues[2]);
 
 		// Remember Gyro angles

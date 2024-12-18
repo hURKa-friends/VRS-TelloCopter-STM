@@ -115,8 +115,9 @@ void LSM6DS0_init(void *readCallback, void *writeCallback)
 	if (LSM6DS0_deviceState != LSM6DS0_CONNECTED)
 		return; // LSM6DS0 Init failed.
 
+	LL_mDelay(100);
 	LSM6DS0_init_registers();
-
+	LL_mDelay(100);
 	LSM6DS0_calibrate_gyro();
 
 	LSM6DS0_deviceState = LSM6DS0_INITIALIZED;
@@ -150,7 +151,7 @@ void LSM6DS0_init_registers()
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG9_ADDRESS,    0x00U); // CTRL_REG9  = 0b0000 0000 (Default)
 	LSM6DS0_write_byte(LSM6DS0_CTRL_REG10_ADDRESS,   0x00U); // CTRL_REG10 = 0b0000 0000 (Default)
 
-	LL_mDelay(1);
+	LL_mDelay(100);
 
 	/*
 	 * Initialization of GYROSCOPE SCALER VALUE BASED ON SELECTED MEASURE RANGE

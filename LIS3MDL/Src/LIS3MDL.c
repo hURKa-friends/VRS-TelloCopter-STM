@@ -115,8 +115,11 @@ void LIS3MDL_init(void *readCallback, void *writeCallback)
 	if (LIS3MDL_deviceState != LIS3MDL_CONNECTED)
 		return; // LIS3MDL Init failed.
 
+	LL_mDelay(100);
 	LIS3MDL_init_registers();
+	LL_mDelay(100);
 	LIS3MDL_read_offsets();
+	LL_mDelay(100);
 	LIS3MDL_set_init_mag();
 
 	LIS3MDL_deviceState = LIS3MDL_INITIALIZED;
